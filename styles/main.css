@@ -1,0 +1,34 @@
+@font-face {
+	font-family: 'Avenir';
+	src: url('fonts/Avenir-book.ttf');
+	font-weight: normal;
+	font-style: normal; }
+
+@font-face {
+	font-family: 'Avenir';
+	src: url('fonts/Avenir-oblique.ttf');
+	font-weight: normal;
+	font-style: italic; }
+	
+@font-face {
+	font-family: 'Avenir';
+	src: url('fonts/Avenir-bold.ttf');
+	font-weight: bold;
+	font-style: normal; }
+	
+	
+/* Color definitions in one place for consistency */
+:root {
+	--bg: #f9f9f9;
+	--link: #325ca5;
+	--light-grey: #999;
+	--emph-grey: #f3f3f3;
+	--text: #333;
+}
+
+/* BASICS */
+body {
+	font-family: Avenir, sans-serif;
+	background: var(--bg); 
+	color: var(--text);
+	line-height: 1.3; }
