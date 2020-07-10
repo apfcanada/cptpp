@@ -16,8 +16,12 @@
     "url": "https://github.com/Nate-Wessel/web-map/issues"
   },
   "homepage": "https://github.com/Nate-Wessel/web-map#readme",
-  "dependencies": {},
+  "dependencies": {
+    "accessible-autocomplete": "^2.0.3"
+  },
   "devDependencies": {
+    "rollup": "^2.21.0",
+    "@rollup/plugin-commonjs": "^13.0.0",
     "@rollup/plugin-node-resolve": "^8.1.0"
   }
 }
