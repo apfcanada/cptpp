@@ -1073,14 +1073,14 @@ function select(selector) {
 }
 
 // async call for data
-csv$1('./data/tariffs.csv').then( tariffData => {
+csv$1('./data/HScodes.csv').then( HScodes => {
 	if( ! (
-		tariffData.columns.includes('HS6') & 
-		tariffData.columns.includes('description')
+		HScodes.columns.includes('HS6') & 
+		HScodes.columns.includes('description')
 	) ){ return }
 	// add options to the existing dropdown
 	let selectEl = select('select#hs6');
-	let options = selectEl.selectAll('option').data( tariffData );
+	let options = selectEl.selectAll('option').data( HScodes );
 	options.enter().append('option')
 		.property('value', d => d.HS6 )
 		.text( d => `${d.HS6} - ${d.description}` );
@@ -1094,3 +1094,14 @@ csv$1('./data/tariffs.csv').then( tariffData => {
 		selectElement: document.querySelector('select#hs6')
 	});
 });
+
+// if previosuly submitted, show us some data
+var params = new URLSearchParams( window.location.search );
+if ( params ) {
+	let HSval = params.get('hs6');
+	console.log(`showing results for HS=${HSval}`);
+	csv$1('./data/tariffs.csv').then( tariffData => {
+		let row = tariffData.find( record => record.HS6 == HSval );
+		console.log(row);
+	});
+}

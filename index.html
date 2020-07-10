@@ -12,15 +12,16 @@
 	<body>
 	
 		<h1>Tariff search tool</h1>
+		<form action="" method="get">
+			<label for="hs6">Select a product category by name or HS code</label>
+			<div class="autocomplete-wrapper">
+				<select name="hs6" id="hs6">
+					<option value=''>-</option>
+				</select>
+			</div><!-- .autocomplete-wrapper -->
+		</form>		
+		<div id="product-info"></div>
 		
-		<label for="hs6">Product HS code</label>
-		<div class="autocomplete-wrapper">
-			<select name="hs6" id="hs6">
-				<option value=''>-</option>
-			</select>
-		</div><!-- .autocomplete-wrapper -->
-			
-		<div id="map"></div>
 	</body>
 	<script src="bundle.js"></script>
 </html>
