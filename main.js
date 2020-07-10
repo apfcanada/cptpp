@@ -1,10 +1,11 @@
 import accessibleAutocomplete from 'accessible-autocomplete'
- 
-const HS2values = [
-  '27','76','32','34','61','62','42','29','62','43'
-]
-accessibleAutocomplete({
-  element: document.querySelector('#hs2-container'),
-  id: 'hs2-select', // To match it to the existing <label>.
-  source: HS2values
+import { csv } from 'd3-fetch'
+
+csv('./data/tariffs.csv').then( function(data){
+	//console.log(data)
+	accessibleAutocomplete({
+		element: document.querySelector('#hs2-container'),
+		id: 'hs2-select',
+		source: data.map( d=> d.HS2 )
+	})
 })
