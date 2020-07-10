@@ -7,5 +7,12 @@ export default {
 		file: 'bundle.js',
 		format: 'cjs'
 	},
-	plugins: [ resolve(), commonjs() ]
+	plugins: [ 
+		resolve(), 
+		commonjs() 
+	],
+	onwarn: function (warning, warn) {
+		if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+		warn(warning);
+	}
 };
