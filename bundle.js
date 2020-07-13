@@ -1104,6 +1104,6 @@ if ( params ) {
 		let row = tariffData.find( record => record.HS6 == `'${HSval}` );
 		let infoBox = select('#category-info');
 		infoBox.append('h2').text(`${row.HS6.substring(1)} - ${row.Description}`);
-		infoBox.append('p').text( JSON.stringify(row) );
+		infoBox.append('p').append('pre').text( JSON.stringify(row,null,2) );
 	});
 }
