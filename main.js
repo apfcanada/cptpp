@@ -12,8 +12,8 @@ csv('./data/HScodes.csv').then( HScodes => {
 	let selectEl = select('select#hs6')
 	let options = selectEl.selectAll('option').data( HScodes )
 	options.enter().append('option')
-		.property('value', d => d.HS6 )
-		.text( d => `${d.HS6} - ${d.description}` )
+		.property('value', d => d.HS6.substring(1) )
+		.text( d => `${d.HS6.substring(1)} - ${d.description}` )
 	options.exit().remove()
 	// enable easier, accessible selections
 	accessibleAutocomplete.enhanceSelectElement({
@@ -30,8 +30,10 @@ var params = new URLSearchParams( window.location.search );
 if ( params ) {
 	let HSval = params.get('hs6')
 	console.log(`showing results for HS=${HSval}`)
-	csv('./data/tariffs.csv').then( tariffData => {
-		let row = tariffData.find( record => record.HS6 == HSval )
-		console.log(row)
+	csv('./data/the-data.csv').then( tariffData => {
+		let row = tariffData.find( record => record.HS6 == `'${HSval}` )
+		let infoBox = select('#category-info')
+		infoBox.append('h2').text(`${row.HS6.substring(1)} - ${row.Description}`)
+		infoBox.append('p').text( JSON.stringify(row) )
 	})
 }
