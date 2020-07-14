@@ -214,6 +214,16 @@ function dsvParse(parse) {
 
 var csv$1 = dsvParse(csvParse);
 
+function responseJson(response) {
+  if (!response.ok) throw new Error(response.status + " " + response.statusText);
+  if (response.status === 204 || response.status === 205) return;
+  return response.json();
+}
+
+function json(input, init) {
+  return fetch(input, init).then(responseJson);
+}
+
 var xhtml = "http://www.w3.org/1999/xhtml";
 
 var namespaces = {
@@ -1072,7 +1082,12 @@ function select(selector) {
       : new Selection([[selector]], root);
 }
 
-// async call for data
+var USD = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+});
+
+// create the search box, populated with data
 csv$1('./data/HScodes.csv').then( HScodes => {
 	if( ! (
 		HScodes.columns.includes('HS6') & 
@@ -1095,7 +1110,7 @@ csv$1('./data/HScodes.csv').then( HScodes => {
 	});
 });
 
-// if previosuly submitted, show us some data
+// if previosuly submitted, show us some data!
 var params = new URLSearchParams( window.location.search );
 if ( params ) {
 	let HSval = params.get('hs6');
@@ -1111,27 +1126,36 @@ if ( params ) {
 		infoBox.append('p').text(row['Japan Rate for Canada TPP']);
 		
 		infoBox.append('h3').text('Market Opportunity');
-		let dollar_opp = row['Total Canada Gain - no export promotion'];
+		let dollar_opp = USD.format(row['Total Canada Gain - no export promotion']);
 		let percent_opp = row['Total Canada Gain %'];
-		infoBox.append('p').text(`\$${dollar_opp} USD (${percent_opp})`);
-		
-		infoBox.append('h3').text('Top 5 Global Exporters to Japan');
-		infoBox.append('p').text('TBD');
-		
+		infoBox.append('p').text(`${dollar_opp} USD (${percent_opp})`);
+				
 		infoBox.append('h3').text('Provincial Gains');
 		const provinces = ['BC','AB','SK','MB'];
 		provinces.forEach( province => {
-			let dollars = row[`${province} Gain - no export promotion`];
+			let dollars = USD.format(row[`${province} Gain - no export promotion`]);
 			let percent = row[`${province}%`];
 			infoBox
 				.append('p')
-				.text(`${province} - \$${dollars} (${percent})`);
+				.text(`${province} - ${dollars} USD (${percent})`);
+		});
+		
+		infoBox.append('h3').text('Top 5 Global Exporters to Japan');
+		// https://comtrade.un.org/Data/Doc/API
+		let API = `https://comtrade.un.org/api/get?max=500&freq=A&px=HS&r=all&p=392&rg=all&cc=${HSval}`;
+		json(API).then(data => {
+			data.dataset.sort( (a,b) => b.TradeValue - a.TradeValue );
+			let top5 = data.dataset.slice(0,5);
+			let top5List = infoBox.append('ol').selectAll('li').data(top5);
+			top5List.enter().append('li')
+				.text( d => {
+					let country = d.rtTitle;
+					let dollars = USD.format(d.TradeValue);
+					return `${country}: ${dollars} USD` 
+				});
 		});
 		
 		// temporary
-		infoBox
-			.append('p')
-			.append('pre')
-			.text( JSON.stringify(row,null,2) );
+		//infoBox.append('p').append('pre').text( JSON.stringify(row,null,2) )
 	});
 }
