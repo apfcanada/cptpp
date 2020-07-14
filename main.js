@@ -33,7 +33,35 @@ if ( params ) {
 	csv('./data/the-data.csv').then( tariffData => {
 		let row = tariffData.find( record => record.HS6 == `'${HSval}` )
 		let infoBox = select('#category-info')
-		infoBox.append('h2').text(`${row.HS6.substring(1)} - ${row.Description}`)
-		infoBox.append('p').append('pre').text( JSON.stringify(row,null,2) )
+		infoBox
+			.append('h2')
+			.text( `${row.HS6.substring(1)} - ${row.Description}` )
+
+		infoBox.append('h3').text('Tariff Rate')
+		infoBox.append('p').text(row['Japan Rate for Canada TPP'])
+		
+		infoBox.append('h3').text('Market Opportunity')
+		let dollar_opp = row['Total Canada Gain - no export promotion']
+		let percent_opp = row['Total Canada Gain %']
+		infoBox.append('p').text(`\$${dollar_opp} USD (${percent_opp})`)
+		
+		infoBox.append('h3').text('Top 5 Global Exporters to Japan')
+		infoBox.append('p').text('TBD')
+		
+		infoBox.append('h3').text('Provincial Gains')
+		const provinces = ['BC','AB','SK','MB']
+		provinces.forEach( province => {
+			let dollars = row[`${province} Gain - no export promotion`]
+			let percent = row[`${province}%`]
+			infoBox
+				.append('p')
+				.text(`${province} - \$${dollars} (${percent})`)
+		})
+		
+		// temporary
+		infoBox
+			.append('p')
+			.append('pre')
+			.text( JSON.stringify(row,null,2) )
 	})
 }
