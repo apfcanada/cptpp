@@ -68,11 +68,13 @@ if ( params ) {
 		}
 		// get external top-5 data
 		infoBox.append('h3').text('Top 5 Global Exporters to Japan')
+		infoBox.append('p').attr('id','loading').text('loading...')
 		// https://comtrade.un.org/Data/Doc/API
 		let API = `https://comtrade.un.org/api/get?max=500&freq=A&px=HS&r=all&p=392&rg=all&cc=${HSval}`
 		json(API).then(data => {
 			data.dataset.sort( (a,b) => b.TradeValue - a.TradeValue )
 			let top5 = data.dataset.slice(0,5)
+			infoBox.select('p#loading').remove()
 			let top5List = infoBox.append('ol').selectAll('li').data(top5)
 			top5List.enter().append('li')
 				.text( d => {
