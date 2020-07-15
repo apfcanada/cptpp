@@ -1130,7 +1130,7 @@ if ( params ) {
 		let provincialGains = provinces.map( province => {
 			let dollars = record[`${province.abbr} Gain - no export promotion`];
 			let percent = record[`${province.abbr}%`];
-			let text = `${province.full} - ${USD.format(dollars)} (+${percent})`;
+			let text = `${province.full} - ${USD.format(dollars)} (+${percent}%)`;
 			return dollars >= 500 ? text : null
 		}).filter( val => val );
 		// append data to DOM
