@@ -50,8 +50,9 @@ if ( params ) {
 		let provincialGains = provinces.map( province => {
 			let dollars = record[`${province.abbr} Gain - no export promotion`]
 			let percent = record[`${province.abbr}%`]
-			return `${province.full} - ${USD.format(dollars)} (+${percent})`
-		})
+			let text = `${province.full} - ${USD.format(dollars)} (+${percent})`
+			return dollars >= 500 ? text : null
+		}).filter( val => val )
 		// append data to DOM
 		infoBox.append('h2').text( `${HSval} - ${description}` )
 		infoBox.append('h3').text('Tariff Rate')
@@ -59,10 +60,12 @@ if ( params ) {
 		infoBox.append('h3').text('Market Opportunity')
 		infoBox.append('p')
 			.text(`${USD.format(canadaGain)} (+${canadaGainPercent}%)`)
-		infoBox.append('h3').text('Provincial Gains')
-		provincialGains.forEach( content => {
-			infoBox.append('p').text(content)
-		})
+		if( provincialGains.length > 0 ){
+			infoBox.append('h3').text('Provincial Gains')
+			provincialGains.forEach( content => {
+				infoBox.append('p').text(content)
+			})
+		}
 		// get external top-5 data
 		infoBox.append('h3').text('Top 5 Global Exporters to Japan')
 		// https://comtrade.un.org/Data/Doc/API
