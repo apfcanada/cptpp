@@ -4,6 +4,13 @@ import { select } from 'd3-selection'
 
 var USD = new Intl.NumberFormat('en-CA',{style:'currency',currency:'USD'});
 
+const provinces = [
+	{abbr:'BC',full:'British Columbia'},
+	{abbr:'AB',full:'Alberta'},
+	{abbr:'SK',full:'Saskatchewan'},
+	{abbr:'MB',full:'Manitoba'}
+]
+
 // create the search box, populated with data
 csv('./data/HScodes.csv').then( HScodes => {
 	if( ! (
@@ -31,32 +38,32 @@ csv('./data/HScodes.csv').then( HScodes => {
 var params = new URLSearchParams( window.location.search );
 if ( params ) {
 	let HSval = params.get('hs6')
-	console.log(`showing results for HS=${HSval}`)
 	csv('./data/the-data.csv').then( tariffData => {
-		let row = tariffData.find( record => record.HS6 == `'${HSval}` )
+		let record = tariffData.find( record => record.HS6 == `'${HSval}` )
 		let infoBox = select('#category-info')
-		infoBox
-			.append('h2')
-			.text( `${row.HS6.substring(1)} - ${row.Description}` )
-
-		infoBox.append('h3').text('Tariff Rate')
-		infoBox.append('p').text(row['Japan Rate for Canada TPP'])
-		
-		infoBox.append('h3').text('Market Opportunity')
-		let dollar_opp = USD.format(row['Total Canada Gain - no export promotion'])
-		let percent_opp = row['Total Canada Gain %']
-		infoBox.append('p').text(`${dollar_opp} (${percent_opp})`)
-				
-		infoBox.append('h3').text('Provincial Gains')
-		const provinces = ['BC','AB','SK','MB']
-		provinces.forEach( province => {
-			let dollars = USD.format(row[`${province} Gain - no export promotion`])
-			let percent = row[`${province}%`]
-			infoBox
-				.append('p')
-				.text(`${province} - ${dollars} (${percent})`)
+		// variable name mapping, etc
+		let description = record['Description']
+		let tariffRate = record['Japan Rate for Canada TPP']
+		let canadaGain = record['Total Canada Gain - no export promotion']
+		let canadaGainPercent = record['Total Canada Gain %']
+		// only show provincial gains > $1,000
+		let provincialGains = provinces.map( province => {
+			let dollars = record[`${province.abbr} Gain - no export promotion`]
+			let percent = record[`${province.abbr}%`]
+			return `${province.full} - ${USD.format(dollars)} (+${percent})`
 		})
-		
+		// append data to DOM
+		infoBox.append('h2').text( `${HSval} - ${description}` )
+		infoBox.append('h3').text('Tariff Rate')
+		infoBox.append('p').text(tariffRate)
+		infoBox.append('h3').text('Market Opportunity')
+		infoBox.append('p')
+			.text(`${USD.format(canadaGain)} (+${canadaGainPercent}%)`)
+		infoBox.append('h3').text('Provincial Gains')
+		provincialGains.forEach( content => {
+			infoBox.append('p').text(content)
+		})
+		// get external top-5 data
 		infoBox.append('h3').text('Top 5 Global Exporters to Japan')
 		// https://comtrade.un.org/Data/Doc/API
 		let API = `https://comtrade.un.org/api/get?max=500&freq=A&px=HS&r=all&p=392&rg=all&cc=${HSval}`
@@ -71,8 +78,5 @@ if ( params ) {
 					return `${country}: ${dollars}` 
 				})
 		})
-		
-		// temporary
-		//infoBox.append('p').append('pre').text( JSON.stringify(row,null,2) )
 	})
 }
