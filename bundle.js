@@ -1082,10 +1082,7 @@ function select(selector) {
       : new Selection([[selector]], root);
 }
 
-var USD = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-});
+var USD = new Intl.NumberFormat('en-CA',{style:'currency',currency:'USD'});
 
 // create the search box, populated with data
 csv$1('./data/HScodes.csv').then( HScodes => {
@@ -1128,7 +1125,7 @@ if ( params ) {
 		infoBox.append('h3').text('Market Opportunity');
 		let dollar_opp = USD.format(row['Total Canada Gain - no export promotion']);
 		let percent_opp = row['Total Canada Gain %'];
-		infoBox.append('p').text(`${dollar_opp} USD (${percent_opp})`);
+		infoBox.append('p').text(`${dollar_opp} (${percent_opp})`);
 				
 		infoBox.append('h3').text('Provincial Gains');
 		const provinces = ['BC','AB','SK','MB'];
@@ -1137,7 +1134,7 @@ if ( params ) {
 			let percent = row[`${province}%`];
 			infoBox
 				.append('p')
-				.text(`${province} - ${dollars} USD (${percent})`);
+				.text(`${province} - ${dollars} (${percent})`);
 		});
 		
 		infoBox.append('h3').text('Top 5 Global Exporters to Japan');
@@ -1151,7 +1148,7 @@ if ( params ) {
 				.text( d => {
 					let country = d.rtTitle;
 					let dollars = USD.format(d.TradeValue);
-					return `${country}: ${dollars} USD` 
+					return `${country}: ${dollars}` 
 				});
 		});
 		
