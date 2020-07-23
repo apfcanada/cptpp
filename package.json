@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nate-Wessel/web-map.git"
+    "url": "git+https://github.com/apfcanada/cptpp.git"
   },
-  "author": "",
+  "author": "Nate Wessel",
   "license": "",
   "bugs": {
-    "url": "https://github.com/Nate-Wessel/web-map/issues"
+    "url": "https://github.com/apfcanada/cptpp/issues"
   },
-  "homepage": "https://github.com/Nate-Wessel/web-map#readme",
+  "homepage": "https://github.com/apfcanada/cptpp",
   "dependencies": {
     "accessible-autocomplete": "^2.0.3",
     "d3-fetch": "^1.2.0",

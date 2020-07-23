@@ -1116,10 +1116,10 @@ csv$1('./data/HScodes.csv').then( HScodes => {
 
 // if previosuly submitted, show us some data!
 var params = new URLSearchParams( window.location.search );
-if ( params ) {
+if ( params.get('hs6') ) {
 	let HSval = params.get('hs6');
 	csv$1('./data/the-data.csv').then( tariffData => {
-		let record = tariffData.find( record => record.HS6 == `'${HSval}` );
+		let record = tariffData.find( r => r.HS6 == `'${HSval}` );
 		let infoBox = select('#category-info');
 		// variable name mapping, etc
 		let description = record['Description'];
@@ -1151,12 +1151,15 @@ if ( params ) {
 		infoBox.append('p').attr('id','loading').text('loading...');
 		// https://comtrade.un.org/Data/Doc/API
 		let API = `https://comtrade.un.org/api/get?max=500&freq=A&px=HS&r=all&p=392&rg=all&cc=${HSval}`;
-		json(API).then(data => {
-			data.dataset.sort( (a,b) => b.TradeValue - a.TradeValue );
-			let top5 = data.dataset.slice(0,5);
+		json(API).then( response => {
+			let data = response.dataset.sort((a,b)=>b.TradeValue-a.TradeValue);
+			// get Canada's position
+			let ci = data.findIndex( d => d.rtTitle == 'Canada' );
+			let topN = data.slice(0, ci+1 > 5 ? ci+1 : 5 );
+			console.log(topN);
 			infoBox.select('p#loading').remove();
-			let top5List = infoBox.append('ol').selectAll('li').data(top5);
-			top5List.enter().append('li')
+			let topNList = infoBox.append('ol').selectAll('li').data(topN);
+			topNList.enter().append('li')
 				.text( d => {
 					let country = d.rtTitle;
 					let dollars = USD.format(d.TradeValue);
