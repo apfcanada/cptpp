@@ -1178,7 +1178,7 @@ if ( params.get('hs6') ) {
 				},
 				{ 
 					apiKey:'TradeValue',
-					label:'Value of Trade (USD)',
+					label:'Value of Exports (USD)',
 					format: NUM.format
 				}
 			];
