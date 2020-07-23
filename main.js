@@ -67,21 +67,31 @@ if ( params.get('hs6') ) {
 			})
 		}
 		// get external top-5 data
-		infoBox.append('h3').text('Top 5 Global Exporters to Japan')
+		infoBox.append('h3').text('Top Global Exporters to Japan')
 		infoBox.append('p').attr('id','loading').text('loading...')
 		// https://comtrade.un.org/Data/Doc/API
-		let API = `https://comtrade.un.org/api/get?max=500&freq=A&px=HS&r=all&p=392&rg=all&cc=${HSval}`
-		json(API).then( response => {
+		let params = new URLSearchParams({
+			'r':392,    // data reported by/for Japan
+			'p':'all',  // for all partner regions
+			'freq':'A', // annual data
+			'ps':'now', // latest time period
+			'px':'HS',  // search by HS code
+			'cc':HSval, // selected HS code
+			'rg':1,     // imports only
+			'max':500   // max records returned
+		})
+		let url = `https://comtrade.un.org/api/get?${params}`
+		json(url).then( response => {
 			let data = response.dataset.sort((a,b)=>b.TradeValue-a.TradeValue)
+			let world = data.shift()
 			// get Canada's position
-			let ci = data.findIndex( d => d.rtTitle == 'Canada' )
-			let topN = data.slice(0, ci+1 > 5 ? ci+1 : 5 )
-			console.log(topN)
+			let canIndex = data.findIndex( d => d.ptTitle == 'Canada' )
+			let topN = data.slice(0, canIndex+1 > 5 ? canIndex+1 : 5 )
 			infoBox.select('p#loading').remove()
 			let topNList = infoBox.append('ol').selectAll('li').data(topN)
 			topNList.enter().append('li')
 				.text( d => {
-					let country = d.rtTitle
+					let country = d.ptTitle
 					let dollars = USD.format(d.TradeValue)
 					return `${country}: ${dollars}` 
 				})
