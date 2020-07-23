@@ -88,13 +88,36 @@ if ( params.get('hs6') ) {
 			let canIndex = data.findIndex( d => d.ptTitle == 'Canada' )
 			let topN = data.slice(0, canIndex+1 > 5 ? canIndex+1 : 5 )
 			infoBox.select('p#loading').remove()
-			let topNList = infoBox.append('ol').selectAll('li').data(topN)
-			topNList.enter().append('li')
-				.text( d => {
-					let country = d.ptTitle
-					let dollars = USD.format(d.TradeValue)
-					return `${country}: ${dollars}` 
-				})
+			// create a table for results
+			const columns = [
+				{ 
+					apiKey:'ptTitle', 
+					label:'Country', 
+					format: text=>text
+				},
+				{ 
+					apiKey:'TradeValue',
+					label:'Value of Trade (USD)',
+					format: USD.format
+				}
+			]
+			let table = infoBox.append('table')
+			table
+				.append('thead')
+				.append('tr')
+				.selectAll('th')
+				.data(columns)
+				.join('th')
+				.text(d=>d.label)
+			table
+				.append('tbody')
+				.selectAll('tr')
+				.data(topN)
+				.join('tr')
+				.selectAll('td')
+				.data( d => columns.map( c => c.format( d[c.apiKey] ) ) ) 
+				.join('td')
+				.text(d=>d)
 		})
 	})
 }
