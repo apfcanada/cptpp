@@ -3,6 +3,7 @@ import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
 
 var USD = new Intl.NumberFormat('en-CA',{style:'currency',currency:'USD'});
+var NUM = new Intl.NumberFormat();
 
 const provinces = [
 	{abbr:'BC',full:'British Columbia'},
@@ -98,7 +99,7 @@ if ( params.get('hs6') ) {
 				{ 
 					apiKey:'TradeValue',
 					label:'Value of Trade (USD)',
-					format: USD.format
+					format: NUM.format
 				}
 			]
 			let table = infoBox.append('table')
@@ -117,7 +118,8 @@ if ( params.get('hs6') ) {
 				.selectAll('td')
 				.data( d => columns.map( c => c.format( d[c.apiKey] ) ) ) 
 				.join('td')
-				.text(d=>d)
+				.style('font-weight',text=>text=='Canada'?'bold':null)
+				.text(text=>text)
 		})
 	})
 }
