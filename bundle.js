@@ -1097,42 +1097,40 @@ const provinces = [
 ];
 
 // create the search box, populated with data
-json('./data/HScodes.json').then( response => {
-	// just 6 digit codes for now
-	const HScodes = response.filter( d => /^\d{6}$/.test(d.id) );
+json('./data/canada-to-japan-trade-2019.json').then( response => {
+	const HScodes = response.dataset.filter( d=> d.TradeValue >= 5000 );
+	console.log(HScodes.length);
 	// enable easier, accessible selections
 	accessibleAutocomplete({
 		element: document.querySelector('#hs6select'),
 		id: '#hs6select',
 		source: suggest,
 		minLength: 2,
-		name:'hs6',
-		defaultValue:HScode,
+		name: 'hs6',
+		defaultValue: HScode,
 		templates: { 
 			inputValue: inputValueTemplate,
 			suggestion: suggestionTemplate
 		}
 	});
-	
 	function inputValueTemplate(result){
-		return result && result.id
+		return result ? result.cmdCode : ''
 	}
 	function suggestionTemplate(result){
-		return result && result.text
+		return result ? result.cmdDescE : ''
 	}
-	
 	function suggest (query, syncResults) {
 		let results;
 		console.log(query);
 		if ( /^\d+$/.test(query) ) {
 			// if fully numeric, search by HS code only
 			results = HScodes.filter( 
-				d => d.id.indexOf(query) == 0 
+				d => d.cmdCode.indexOf(query) == 0 
 			);
 		}else {
 			// else search by descriptive text (incl. HS code)
 			results = HScodes.filter( 
-				d => d.text.toLowerCase().indexOf(query) != -1 
+				d => d.cmdDescE.toLowerCase().indexOf(query) != -1 
 			);
 		}
 		//let vals = results.map( d => d.text )
