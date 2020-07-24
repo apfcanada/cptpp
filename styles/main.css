@@ -20,10 +20,8 @@
 /* Color definitions in one place for consistency */
 :root {
 	--bg: #f9f9f9;
-	--link: #325ca5;
-	--light-grey: #999;
-	--emph-grey: #f3f3f3;
 	--text: #333;
+	--link: #325ca5;
 }
 
 /* BASICS */
@@ -33,5 +31,16 @@ body {
 	color: var(--text);
 	line-height: 1.3; }
 	
+table {
+	border-collapse: collapse; }
 table td:nth-child(2) {
+	font-family: monospace;
 	text-align: right; }
+table th, 
+table td {
+	padding: 3px; }
+table th {
+	border-bottom: 1px solid; }
+table tbody tr:nth-child(odd) {
+  background: #eee;
+}
