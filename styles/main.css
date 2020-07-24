@@ -33,12 +33,15 @@ body {
 	
 table {
 	border-collapse: collapse; }
+table td:nth-child(1),
+table th:nth-child(1) {
+	border-right: 1px solid grey; }
 table td:nth-child(2) {
 	font-family: monospace;
 	text-align: right; }
 table th, 
 table td {
-	padding: 3px; }
+	padding: 5px; }
 table th {
 	border-bottom: 1px solid; }
 table tbody tr:nth-child(odd) {

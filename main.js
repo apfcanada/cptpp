@@ -2,6 +2,10 @@ import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
 
+// get query parameter of any previous search
+var params = new URLSearchParams( window.location.search );
+const HScode = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
+
 const USD = new Intl.NumberFormat('en-CA',{style:'currency',currency:'USD'});
 const NUM = new Intl.NumberFormat();
 
@@ -13,42 +17,62 @@ const provinces = [
 ]
 
 // create the search box, populated with data
-csv('./data/HScodes.csv').then( HScodes => {
-	if( ! (
-		HScodes.columns.includes('HS6') & 
-		HScodes.columns.includes('description')
-	) ){ return }
-	// add options to the existing dropdown
-	let selectEl = select('select#hs6')
-	let options = selectEl.selectAll('option').data( HScodes )
-	options.enter().append('option')
-		.property('value', d => d.HS6.substring(1) )
-		.text( d => `${d.HS6.substring(1)} - ${d.description}` )
-	options.exit().remove()
+json('./data/HScodes.json').then( response => {
+	// just 6 digit codes for now
+	const HScodes = response.filter( d => /^\d{6}$/.test(d.id) )
 	// enable easier, accessible selections
-	accessibleAutocomplete.enhanceSelectElement({
-		autoselect: true,
-		confirmOnBlur: true,
-		defaultValue: "",
-		minLength: 1,
-		selectElement: document.querySelector('select#hs6')
+	accessibleAutocomplete({
+		element: document.querySelector('#hs6select'),
+		id: '#hs6select',
+		source: suggest,
+		minLength: 2,
+		name:'hs6',
+		defaultValue:HScode,
+		templates: { 
+			inputValue: inputValueTemplate,
+			suggestion: suggestionTemplate
+		}
 	})
+	
+	function inputValueTemplate(result){
+		return result && result.id
+	}
+	function suggestionTemplate(result){
+		return result && result.text
+	}
+	
+	function suggest (query, syncResults) {
+		let results
+		console.log(query)
+		if ( /^\d+$/.test(query) ) {
+			// if fully numeric, search by HS code only
+			results = HScodes.filter( 
+				d => d.id.indexOf(query) == 0 
+			)
+		}else{
+			// else search by descriptive text (incl. HS code)
+			results = HScodes.filter( 
+				d => d.text.toLowerCase().indexOf(query) != -1 
+			)
+		}
+		//let vals = results.map( d => d.text )
+		syncResults(results)
+	}
 })
 
-// if previosuly submitted, show us some data!
-var params = new URLSearchParams( window.location.search );
-if ( params.get('hs6') && /^\d{6}$/.test(params.get('hs6')) ) {
-	const HSval = params.get('hs6')
+// if previously submitted, show us some data!
+if (HScode) {
 	const infoBox = select('#category-info')
-	const A = infoBox.append('div')
-	const B = infoBox.append('div')
-	addOurData(HSval,A)
-	addComtradeData(HSval,B)
+	const Adiv = infoBox.append('div')
+	const Bdiv = infoBox.append('div')
+	addOurData(HScode,Adiv)
+	addComtradeData(HScode,Bdiv)
 }
 
 function addOurData(hscode,container){
-	csv('./data/the-data.csv').then( tariffData => {
-		let record = tariffData.find( r => r.HS6 == `'${hscode}` )
+	csv('./data/the-data.csv').then( response => {
+		const record = response.find( r => r.HS6 == `'${hscode}` )
+		if ( ! record ) { return }
 		// variable name mapping, etc
 		let description = record['Description']
 		let tariffRate = record['Japan Rate for Canada TPP']
