@@ -18,8 +18,10 @@ const provinces = [
 
 // create the search box, populated with data
 json('./data/canada-to-japan-trade-2019.json').then( response => {
-	const HScodes = response.dataset.filter( d=> d.TradeValue >= 5000 )
-	console.log(HScodes.length)
+	const HScodes = response.dataset
+		.filter( d=> d.TradeValue >= 5000 )
+		.sort( (A,B) => B.TradeValue - A.TradeValue )
+	console.log(HScodes)
 	// enable easier, accessible selections
 	accessibleAutocomplete({
 		element: document.querySelector('#hs6select'),
