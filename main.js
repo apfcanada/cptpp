@@ -31,32 +31,20 @@ json('./data/canada-to-japan-trade-2019.json').then( response => {
 		name: 'hs6',
 		defaultValue: HScode,
 		templates: { 
-			inputValue: inputValueTemplate,
-			suggestion: suggestionTemplate
+			inputValue: d => d ? d.cmdCode : ' ',
+			suggestion: d => d ? `${d.cmdCode} - ${d.cmdDescE}` : ' '
 		}
 	})
-	function inputValueTemplate(result){
-		return result ? result.cmdCode : ''
-	}
-	function suggestionTemplate(result){
-		return result ? result.cmdDescE : ''
-	}
 	function suggest (query, syncResults) {
-		let results
-		console.log(query)
 		if ( /^\d+$/.test(query) ) {
 			// if fully numeric, search by HS code only
-			results = HScodes.filter( 
-				d => d.cmdCode.indexOf(query) == 0 
-			)
+			syncResults( HScodes.filter(  d => d.cmdCode.indexOf(query) == 0  ) )
 		}else{
 			// else search by descriptive text (incl. HS code)
-			results = HScodes.filter( 
+			syncResults( HScodes.filter( 
 				d => d.cmdDescE.toLowerCase().indexOf(query) != -1 
-			)
+			) )
 		}
-		//let vals = results.map( d => d.text )
-		syncResults(results)
 	}
 })
 
@@ -72,7 +60,10 @@ if (HScode) {
 function addOurData(hscode,container){
 	csv('./data/the-data.csv').then( response => {
 		const record = response.find( r => r.HS6 == `'${hscode}` )
-		if ( ! record ) { return }
+		if ( ! record ) { 
+			container.append('p').text('Not affected by the CPTPP')
+			return 
+		}
 		// variable name mapping, etc
 		let description = record['Description']
 		let tariffRate = record['Japan Rate for Canada TPP']
