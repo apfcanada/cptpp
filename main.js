@@ -61,7 +61,10 @@ function addOurData(hscode,container){
 	csv('./data/the-data.csv').then( response => {
 		const record = response.find( r => r.HS6 == `'${hscode}` )
 		if ( ! record ) { 
-			container.append('p').text('Not affected by the CPTPP')
+			container.append('p')
+				.text('Not affected by the CPTPP. Find a tariff at ')
+				.append('a').attr('href','https://www.tariffinder.ca')
+				.text('tariffinder.ca')
 			return 
 		}
 		// variable name mapping, etc
