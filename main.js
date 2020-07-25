@@ -119,6 +119,9 @@ function addComtradeData(hscode,container){
 		let canIndex = data.findIndex( d => d.ptTitle == 'Canada' )
 		let topN = data.slice(0, canIndex+1 > 5 ? canIndex+1 : 5 )
 		container.select('p#loading').remove()
+		if ( topN.length < 1 ) { 
+			return container.append('p').text('No data')
+		}
 		// create a table for results
 		let table = container.append('table')
 		table
