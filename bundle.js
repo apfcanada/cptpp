@@ -1109,7 +1109,6 @@ json('./data/canada-to-japan-trade-2019.json').then( response => {
 		source: suggest,
 		minLength: 2,
 		name: 'hs6',
-		defaultValue: HScode,
 		templates: { 
 			inputValue: d => d ? d.cmdCode : ' ',
 			suggestion: d => d ? `${d.cmdCode} - ${d.cmdDescE}` : ' '
