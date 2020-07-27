@@ -1161,7 +1161,7 @@ function addOurData(hscode,container){
 			let dollars = record[`${province.abbr} Gain - no export promotion`];
 			let percent = record[`${province.abbr}%`];
 			let text = `${province.full} - ${USD.format(dollars)} (+${percent}%)`;
-			return dollars >= 500 ? text : null
+			return dollars > 0 ? text : null
 		}).filter( val => val );
 		// append data to DOM
 		container.append('h3').text('Tariff Rate');
@@ -1170,7 +1170,7 @@ function addOurData(hscode,container){
 		container.append('p')
 			.text(`${USD.format(canadaGain)} (+${canadaGainPercent}%)`);
 		if( provincialGains.length > 0 ){
-			container.append('h3').text('Provincial Gains');
+			container.append('h3').text('Western Provincial Gains');
 			provincialGains.forEach( content => {
 				container.append('p').text(content);
 			});
