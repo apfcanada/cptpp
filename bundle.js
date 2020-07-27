@@ -1166,11 +1166,11 @@ function addOurData(hscode,container){
 		// append data to DOM
 		container.append('h3').text('Tariff Rate');
 		container.append('p').text(tariffRate);
-		container.append('h3').text('Market Opportunity');
+		container.append('h3').text('Expected Canadian Gain');
 		container.append('p')
 			.text(`${USD.format(canadaGain)} (+${canadaGainPercent}%)`);
 		if( provincialGains.length > 0 ){
-			container.append('h3').text('Western Provincial Gains');
+			container.append('h3').text('Expected Western Provincial Gain');
 			provincialGains.forEach( content => {
 				container.append('p').text(content);
 			});
@@ -1180,7 +1180,7 @@ function addOurData(hscode,container){
 
 function addComtradeData(hscode,container){
 	// get external top-5 data
-	container.append('h3').text('Top Global Exporters to Japan');
+	container.append('h3').text('Top Global Exporters to Japan (2019)');
 	container.append('p').attr('id','loading').text('loading...');
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
