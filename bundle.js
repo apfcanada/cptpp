@@ -1096,12 +1096,27 @@ const provinces = [
 	{abbr:'MB',full:'Manitoba'}
 ];
 
+// if previously submitted, render data
+if (HScode) {
+	const infoBox = select('#category-info');
+	const title = infoBox.append('h2').text(HScode);
+	const desc = infoBox.append('p').attr('id','HSdescription');
+	const Adiv = infoBox.append('div');
+	const Bdiv = infoBox.append('div');
+	addOurData(HScode,Adiv);
+	addComtradeData(HScode,Bdiv);
+}
+
 // create the search box, populated with data
 json('./data/canada-to-japan-trade-2019.json').then( response => {
 	const HScodes = response.dataset
 		.filter( d=> d.TradeValue >= 5000 )
 		.sort( (A,B) => B.TradeValue - A.TradeValue );
-	console.log(HScodes);
+	//console.log(HScodes)
+	if (HScode) {
+		let code = HScodes.find(d=>d.cmdCode==HScode);
+		if ( code ) { select('p#HSdescription').text( code.cmdDescE ); }
+	}
 	// enable easier, accessible selections
 	accessibleAutocomplete({
 		element: document.querySelector('#hs6select'),
@@ -1127,15 +1142,6 @@ json('./data/canada-to-japan-trade-2019.json').then( response => {
 	}
 });
 
-// if previously submitted, show us some data!
-if (HScode) {
-	const infoBox = select('#category-info');
-	const Adiv = infoBox.append('div');
-	const Bdiv = infoBox.append('div');
-	addOurData(HScode,Adiv);
-	addComtradeData(HScode,Bdiv);
-}
-
 function addOurData(hscode,container){
 	csv$1('./data/the-data.csv').then( response => {
 		const record = response.find( r => r.HS6 == `'${hscode}` );
@@ -1147,7 +1153,6 @@ function addOurData(hscode,container){
 			return 
 		}
 		// variable name mapping, etc
-		let description = record['Description'];
 		let tariffRate = record['Japan Rate for Canada TPP'];
 		let canadaGain = record['Total Canada Gain - no export promotion'];
 		let canadaGainPercent = record['Total Canada Gain %'];
@@ -1159,7 +1164,6 @@ function addOurData(hscode,container){
 			return dollars >= 500 ? text : null
 		}).filter( val => val );
 		// append data to DOM
-		container.append('h2').text( `${hscode} - ${description}` );
 		container.append('h3').text('Tariff Rate');
 		container.append('p').text(tariffRate);
 		container.append('h3').text('Market Opportunity');
