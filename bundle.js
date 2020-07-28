@@ -1086,8 +1086,19 @@ function select(selector) {
 var params = new URLSearchParams( window.location.search );
 const HScode = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null;
 
-const USD = new Intl.NumberFormat('en-CA',{style:'currency',currency:'USD'});
-const NUM = new Intl.NumberFormat();
+const NUM = new Intl.NumberFormat('en-CA');
+const USD = new Intl.NumberFormat(
+	'en-CA',
+	{
+		style:'currency',
+		currency:'USD',
+		currencyDisplay:'symbol',
+		minimumFractionDigits:0
+	}
+);
+const PCT = new Intl.NumberFormat(
+	'en-CA',{style:'percent',signDisplay:'exceptZero'}
+);
 
 const provinces = [
 	{abbr:'BC',full:'British Columbia'},
@@ -1153,24 +1164,25 @@ function addOurData(hscode,container){
 			return 
 		}
 		// variable name mapping, etc
-		let tariffRate = record['Japan Rate for Canada TPP'];
-		let canadaGain = record['Total Canada Gain - no export promotion'];
-		let canadaGainPercent = record['Total Canada Gain %'];
-		// only show provincial gains > $1,000
+		let tariffRate = record['Japan Rate for Canada TPP'] - 1;
+		let canadaGain = record['Total Canada Gain - no export promotion'] * 1000;
+		let canadaGainPercent = record['Total Canada Gain %'] / 100;
+		// only show provincial gains > $0
 		let provincialGains = provinces.map( province => {
-			let dollars = record[`${province.abbr} Gain - no export promotion`];
-			let percent = record[`${province.abbr}%`];
-			let text = `${province.full} - ${USD.format(dollars)} (+${percent}%)`;
-			return dollars > 0 ? text : null
+			let name = province.full;
+			let gain = record[`${province.abbr} Gain - no export promotion`] * 1000;
+			let change = record[`${province.abbr}%`] / 100;
+			let text = `${name} - ${USD.format(gain)} (${PCT.format(change)})`;
+			return gain > 0 ? text : null
 		}).filter( val => val );
 		// append data to DOM
 		container.append('h3').text('Tariff Rate');
-		container.append('p').text(tariffRate);
+		container.append('p').text(PCT.format(tariffRate));
 		container.append('h3').text('Expected Canadian Gain');
 		container.append('p')
-			.text(`${USD.format(canadaGain)} (+${canadaGainPercent}%)`);
+			.text(`${USD.format(canadaGain)} (${PCT.format(canadaGainPercent)})`);
 		if( provincialGains.length > 0 ){
-			container.append('h3').text('Expected Western Provincial Gain');
+			container.append('h3').text('Expected Gain for Western Provinces');
 			provincialGains.forEach( content => {
 				container.append('p').text(content);
 			});
