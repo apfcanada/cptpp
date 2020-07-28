@@ -34,6 +34,15 @@ body {
 p#HSdescription {
 	font-style: italic;
 	font-size: 1.2em; }
+
+#oldTariffRate,
+#newTariffRate{
+	font-size: 2em;
+	font-weight: bold;
+	margin: 0px 20px; }
+#oldTariffRate {
+	text-decoration-color: red; }
+
 	
 table {
 	border-collapse: collapse; }

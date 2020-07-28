@@ -19,6 +19,7 @@ const USD = new Intl.NumberFormat(
 const PCT = new Intl.NumberFormat(
 	'en-CA',{style:'percent',signDisplay:'exceptZero'}
 );
+const TRF = new Intl.NumberFormat('en-CA',{style:'percent'});
 
 const provinces = [
 	{abbr:'BC',full:'British Columbia'},
@@ -99,8 +100,17 @@ function addOurData(hscode,container){
 		})
 		// append data to DOM
 		container.append('h3').text('Tariff Rate')
-		let tariffRate = record['Japan Rate for Canada TPP'] - 1
-		container.append('p').text(PCT.format(tariffRate))
+		const newRate = record['Japan Rate for Canada TPP'] - 1
+		const prevRate = record['Tariff before CPTPP']
+		let para = container.append('p')
+		para.append('del')
+			.attr('id','oldTariffRate')
+			.attr('title','Tariff rate prior to CPTPP')
+			.text(TRF.format(prevRate))
+		para.append('span')
+			.attr('id','newTariffRate')
+			.attr('title','Current tariff rate under CPTPP')
+			.text(TRF.format(newRate))
 		container
 			.append('h3')
 			.text('Expected Gain for Canada and the Western Provinces')
