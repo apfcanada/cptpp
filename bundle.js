@@ -1154,8 +1154,6 @@ function addOurData(hscode,container){
 				.text('tariffinder.ca');
 			return 
 		}
-		// variable name mapping, etc
-		let tariffRate = record['Japan Rate for Canada TPP'] - 1;
 		// get provincial data
 		const gains = provinces.map( prov => {
 			return {
@@ -1172,33 +1170,32 @@ function addOurData(hscode,container){
 		});
 		// append data to DOM
 		container.append('h3').text('Tariff Rate');
+		let tariffRate = record['Japan Rate for Canada TPP'] - 1;
 		container.append('p').text(PCT.format(tariffRate));
-		if( gains.length > 0 ){
-			container
-				.append('h3')
-				.text('Expected Gain for Canada and the Western Provinces');
-			const table = container.append('table');
-			table
-				.append('thead')
-				.append('tr')
-				.selectAll('th')
-				.data(['','Gain (USD)','Change from baseline'])
-				.join('th')
-				.text(d=>d);
-			const rows = table
-				.append('tbody')
-				.selectAll('tr')
-				.data(gains)
-				.join('tr');
-			rows.append('td')
-				.text( p => p.name )
-				.style('font-weight', p => p.name == 'Canada' ? 'bold' : null );
-			rows.append('td')
-				.text( p => p.gain > 0 ? NUM.format(p.gain) : 'NA');
-			rows.append('td')
-				.text( p => p.gain > 0 ? PCT.format(p.change): 'NA' )
-				.style('text-align','center');
-		}
+		container
+			.append('h3')
+			.text('Expected Gain for Canada and the Western Provinces');
+		const table = container.append('table');
+		table
+			.append('thead')
+			.append('tr')
+			.selectAll('th')
+			.data(['','Gain (USD)','Change from baseline'])
+			.join('th')
+			.text(d=>d);
+		const rows = table
+			.append('tbody')
+			.selectAll('tr')
+			.data(gains)
+			.join('tr');
+		rows.append('td')
+			.text( p => p.name )
+			.style('font-weight', p => p.name == 'Canada' ? 'bold' : null );
+		rows.append('td')
+			.text( p => p.gain > 0 ? NUM.format(p.gain) : 'NA');
+		rows.append('td')
+			.text( p => p.gain > 0 ? PCT.format(p.change): 'NA' )
+			.style('text-align','center');
 	});	
 }
 
