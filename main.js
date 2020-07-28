@@ -139,7 +139,9 @@ function addOurData(hscode,container){
 
 function addComtradeData(hscode,container){
 	// get external top-5 data
-	container.append('h3').text('Top Global Exporters to Japan (2019)')
+	container.append('h3')
+		.text('Top Global Exporters to Japan ')
+		.append('span').attr('id','latestYear')
 	container.append('p').attr('id','loading').text('loading...')
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
@@ -159,6 +161,7 @@ function addComtradeData(hscode,container){
 		// assign rankings based on the sort order
 		data.map((country,index)=> country['rank'] = index )
 		const world = data.shift() // 'world' should always be the largest (rank=0)
+		select('span#latestYear').text(` (${world.period})`)
 		// get Canada's position
 		const canIndex = data.findIndex( d => d.ptTitle == 'Canada' )
 		const topN = data.slice(0, canIndex+1 >= 5 ? canIndex+1 : 5 )
