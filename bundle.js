@@ -1167,14 +1167,14 @@ function addOurData(hscode,container){
 		let tariffRate = record['Japan Rate for Canada TPP'] - 1;
 		let canadaGain = record['Total Canada Gain - no export promotion'] * 1000;
 		let canadaGainPercent = record['Total Canada Gain %'] / 100;
-		// only show provincial gains > $0
-		let provincialGains = provinces.map( province => {
-			let name = province.full;
-			let gain = record[`${province.abbr} Gain - no export promotion`] * 1000;
-			let change = record[`${province.abbr}%`] / 100;
-			let text = `${name} - ${USD.format(gain)} (${PCT.format(change)})`;
-			return gain > 0 ? text : null
-		}).filter( val => val );
+		// get provincial data
+		let provincialGains = provinces.map( prov => {
+			return {
+				'name': prov.full,
+				'gain': 1000 * record[`${prov.abbr} Gain - no export promotion`],
+				'change': 0.01 * record[`${prov.abbr}%`]
+			}
+		}).filter( prov => prov.gain > 0 );
 		// append data to DOM
 		container.append('h3').text('Tariff Rate');
 		container.append('p').text(PCT.format(tariffRate));
@@ -1183,9 +1183,22 @@ function addOurData(hscode,container){
 			.text(`${USD.format(canadaGain)} (${PCT.format(canadaGainPercent)})`);
 		if( provincialGains.length > 0 ){
 			container.append('h3').text('Expected Gain for Western Provinces');
-			provincialGains.forEach( content => {
-				container.append('p').text(content);
-			});
+			const table = container.append('table');
+			table
+				.append('thead')
+				.append('tr')
+				.selectAll('th')
+				.data(['Province','Gain','Change'])
+				.join('th')
+				.text(d=>d);
+			const rows = table
+				.append('tbody')
+				.selectAll('tr')
+				.data(provincialGains)
+				.join('tr');
+			rows.append('td').text( p => p.name );
+			rows.append('td').text( p => USD.format(p.gain) );
+			rows.append('td').text( p => PCT.format(p.change) );
 		}
 	});	
 }
