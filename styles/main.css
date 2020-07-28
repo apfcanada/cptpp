@@ -38,13 +38,16 @@ p#HSdescription {
 table {
 	border-collapse: collapse; }
 table td {
+	text-align: center;
 	font-family: monospace; }
+table td,
+table th {
+	border-left: 1px solid grey; }
 table td:nth-child(1),
 table th:nth-child(1) {
+	text-align: left;
 	font-family: Avenir, sans-serif;
-	border-right: 1px solid grey; }
-table td:nth-child(2) {
-	text-align: right; }
+	border-left: none; }
 table th, 
 table td {
 	padding: 5px; }

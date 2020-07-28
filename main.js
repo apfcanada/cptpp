@@ -117,14 +117,13 @@ function addOurData(hscode,container){
 			.selectAll('tr')
 			.data(gains)
 			.join('tr')
-		rows.append('td')
-			.text( p => p.name )
 			.style('font-weight', p => p.name == 'Canada' ? 'bold' : null )
+		rows.append('td').text( p => p.name )
 		rows.append('td')
-			.text( p => p.gain > 0 ? NUM.format(p.gain) : 'NA')
+			.text( p => p.gain > 0 ? NUM.format(p.gain) : 'None')
+			.style('text-align','right')
 		rows.append('td')
 			.text( p => p.gain > 0 ? PCT.format(p.change): 'NA' )
-			.style('text-align','center')
 	})	
 }
 
@@ -144,38 +143,35 @@ function addComtradeData(hscode,container){
 		'max':500   // max records returned
 	})		
 	let url = `https://comtrade.un.org/api/get?${params}`
-	const columns = [
-		{ apiKey:'ptTitle', label:'Country', format: text=>text },
-		{ apiKey:'TradeValue', label:'Value of Exports (USD)', format: NUM.format }
-	]
 	json(url).then( response => {
-		let data = response.dataset.sort((a,b)=>b.TradeValue-a.TradeValue)
-		let world = data.shift() // world should always be the largest
+		const data = response.dataset.sort((a,b)=>b.TradeValue-a.TradeValue)
+		if ( data.length < 2 ) { return container.append('p').text('No data') }
+		// assign rankings based on the sort order
+		data.map((country,index)=> country['rank'] = index )
+		const world = data.shift() // 'world' should always be the largest (rank=0)
 		// get Canada's position
-		let canIndex = data.findIndex( d => d.ptTitle == 'Canada' )
-		let topN = data.slice(0, canIndex+1 > 5 ? canIndex+1 : 5 )
+		const canIndex = data.findIndex( d => d.ptTitle == 'Canada' )
+		const topN = data.slice(0, canIndex+1 >= 5 ? canIndex+1 : 5 )
 		container.select('p#loading').remove()
-		if ( topN.length < 1 ) { 
-			return container.append('p').text('No data')
-		}
 		// create a table for results
-		let table = container.append('table')
+		const table = container.append('table')
 		table
 			.append('thead')
 			.append('tr')
 			.selectAll('th')
-			.data(columns)
+			.data(['Country','Rank','Value of Exports (USD)'])
 			.join('th')
-			.text(d=>d.label)
-		table
-			.append('tbody')
+			.text(t=>t)
+		const rows = table.append('tbody')
 			.selectAll('tr')
 			.data(topN)
 			.join('tr')
-			.selectAll('td')
-			.data( d => columns.map( c => c.format( d[c.apiKey] ) ) ) 
-			.join('td')
-			.style('font-weight',text=>text=='Canada'?'bold':null)
-			.text(text=>text)		
+			.style('display',d=>d.rank<=4||d.ptTitle=='Canada'?null:'none')
+			.style('font-weight',d=>d.ptTitle=='Canada'?'bold':null)
+		rows.append('td').text(d=>d.ptTitle)
+		rows.append('td').text( d => d.rank )
+		rows.append('td')
+			.text( d => NUM.format(d.TradeValue) )
+			.style('text-align','right')
 	})
 }
