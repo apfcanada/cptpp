@@ -19,7 +19,7 @@ const USD = new Intl.NumberFormat(
 const PCT = new Intl.NumberFormat(
 	'en-CA',{style:'percent',signDisplay:'exceptZero'}
 );
-const TRF = new Intl.NumberFormat('en-CA',{style:'percent'});
+const TRF = new Intl.NumberFormat('en-CA',{style:'percent',maximumFractionDigits:2});
 
 const provinces = [
 	{abbr:'BC',full:'British Columbia'},
