@@ -1087,15 +1087,6 @@ var params = new URLSearchParams( window.location.search );
 const HScode = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null;
 
 const NUM = new Intl.NumberFormat('en-CA');
-const USD = new Intl.NumberFormat(
-	'en-CA',
-	{
-		style:'currency',
-		currency:'USD',
-		currencyDisplay:'symbol',
-		minimumFractionDigits:0
-	}
-);
 const PCT = new Intl.NumberFormat(
 	'en-CA',{style:'percent',signDisplay:'exceptZero'}
 );
@@ -1165,40 +1156,48 @@ function addOurData(hscode,container){
 		}
 		// variable name mapping, etc
 		let tariffRate = record['Japan Rate for Canada TPP'] - 1;
-		let canadaGain = record['Total Canada Gain - no export promotion'] * 1000;
-		let canadaGainPercent = record['Total Canada Gain %'] / 100;
 		// get provincial data
-		let provincialGains = provinces.map( prov => {
+		const gains = provinces.map( prov => {
 			return {
 				'name': prov.full,
 				'gain': 1000 * record[`${prov.abbr} Gain - no export promotion`],
 				'change': 0.01 * record[`${prov.abbr}%`]
 			}
-		}).filter( prov => prov.gain > 0 );
+		}).sort((a,b)=>b.gain-a.gain);
+		// add Canada data to the front
+		gains.unshift({
+			'name': 'Canada',
+			'gain': record['Total Canada Gain - no export promotion'] * 1000,
+			'change': record['Total Canada Gain %'] / 100
+		});
 		// append data to DOM
 		container.append('h3').text('Tariff Rate');
 		container.append('p').text(PCT.format(tariffRate));
-		container.append('h3').text('Expected Canadian Gain');
-		container.append('p')
-			.text(`${USD.format(canadaGain)} (${PCT.format(canadaGainPercent)})`);
-		if( provincialGains.length > 0 ){
-			container.append('h3').text('Expected Gain for Western Provinces');
+		if( gains.length > 0 ){
+			container
+				.append('h3')
+				.text('Expected Gain for Canada and the Western Provinces');
 			const table = container.append('table');
 			table
 				.append('thead')
 				.append('tr')
 				.selectAll('th')
-				.data(['Province','Gain','Change'])
+				.data(['','Gain (USD)','Change from baseline'])
 				.join('th')
 				.text(d=>d);
 			const rows = table
 				.append('tbody')
 				.selectAll('tr')
-				.data(provincialGains)
+				.data(gains)
 				.join('tr');
-			rows.append('td').text( p => p.name );
-			rows.append('td').text( p => USD.format(p.gain) );
-			rows.append('td').text( p => PCT.format(p.change) );
+			rows.append('td')
+				.text( p => p.name )
+				.style('font-weight', p => p.name == 'Canada' ? 'bold' : null );
+			rows.append('td')
+				.text( p => p.gain > 0 ? NUM.format(p.gain) : 'NA');
+			rows.append('td')
+				.text( p => p.gain > 0 ? PCT.format(p.change): 'NA' )
+				.style('text-align','center');
 		}
 	});	
 }
