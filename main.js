@@ -40,14 +40,11 @@ if (HScode) {
 }
 
 // create the search box, populated with data
-json('./data/canada-to-japan-trade-2019.json').then( response => {
-	const HScodes = response.dataset
-		.filter( d=> d.TradeValue >= 5000 )
-		.sort( (A,B) => B.TradeValue - A.TradeValue )
-	//console.log(HScodes)
+csv('./data/canada-to-japan-trade-2019.csv').then( response => {
+	const HScodes = response.filter( d=> d.TradeValue >= 5000 )
 	if (HScode) {
-		let code = HScodes.find(d=>d.cmdCode==HScode)
-		if ( code ) { select('p#HSdescription').text( code.cmdDescE ) }
+		let code = HScodes.find( d => d.HScode == HScode )
+		if ( code ) { select('p#HSdescription').text( code.Description ) }
 	}
 	// enable easier, accessible selections
 	accessibleAutocomplete({
@@ -57,18 +54,18 @@ json('./data/canada-to-japan-trade-2019.json').then( response => {
 		minLength: 2,
 		name: 'hs6',
 		templates: { 
-			inputValue: d => d ? d.cmdCode : ' ',
-			suggestion: d => d ? `${d.cmdCode} - ${d.cmdDescE}` : ' '
+			inputValue: d => d ? d.HScode : ' ',
+			suggestion: d => d ? `${d.HScode} - ${d.Description}` : ' '
 		}
 	})
 	function suggest (query, syncResults) {
 		if ( /^\d+$/.test(query) ) {
 			// if fully numeric, search by HS code only
-			syncResults( HScodes.filter(  d => d.cmdCode.indexOf(query) == 0  ) )
+			syncResults( HScodes.filter(  d => d.HScode.indexOf(query) == 0  ) )
 		}else{
 			// else search by descriptive text (incl. HS code)
 			syncResults( HScodes.filter( 
-				d => d.cmdDescE.toLowerCase().indexOf(query) != -1 
+				d => d.Description.toLowerCase().indexOf(query) != -1 
 			) )
 		}
 	}
