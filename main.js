@@ -164,7 +164,7 @@ function addComtradeData(hscode,container){
 			.selectAll('tr')
 			.data(topN)
 			.join('tr')
-			.style('display',d=>d.rank<=5||d.ptTitle=='Canada'?null:'none')
+			.style('display',d=>d.rank<=4||d.ptTitle=='Canada'?null:'none')
 			.style('font-weight',d=>d.ptTitle=='Canada'?'bold':null)
 		rows.append('td').text(d=>d.ptTitle)
 		rows.append('td').text( d => d.rank )
