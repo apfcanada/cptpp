@@ -1092,7 +1092,8 @@ const PCT = new Intl.NumberFormat(
 );
 const TRF = new Intl.NumberFormat('en-CA',{style:'percent',maximumFractionDigits:2});
 
-const provinces = [
+const regions = [
+	{abbr:'CA',full:'Canada'},
 	{abbr:'BC',full:'British Columbia'},
 	{abbr:'AB',full:'Alberta'},
 	{abbr:'SK',full:'Saskatchewan'},
@@ -1111,12 +1112,12 @@ if (HScode) {
 }
 
 // create the search box, populated with data
-csv$1('./data/unified.csv').then( response => {
-	const HScodes = response.filter( d=> d.TradeValue >= 5000 );
-	console.log(HScodes);
+csv$1('./data/unified-data.csv').then( response => {
+	const HScodes = response;//.filter( d=> d.tradeValue >= 5000 )
+	// enter the description for the selected code
 	if (HScode) {
 		let code = HScodes.find( d => d.HScode == HScode );
-		if ( code ) { select('p#HSdescription').text( code.Description ); }
+		if ( code ) { select('p#HSdescription').text( code.description ); }
 	}
 	// enable easier, accessible selections
 	accessibleAutocomplete({
@@ -1127,59 +1128,53 @@ csv$1('./data/unified.csv').then( response => {
 		name: 'hs6',
 		templates: { 
 			inputValue: d => d ? d.HScode : ' ',
-			suggestion: d => d ? `${d.HScode} - ${d.Description}` : ' '
+			suggestion: d => d ? `${d.HScode} - ${d.description}` : ' '
 		}
 	});
 	function suggest (query, syncResults) {
+		query = query.toLowerCase();
 		if ( /^\d+$/.test(query) ) {
 			// if fully numeric, search by HS code only
 			syncResults( HScodes.filter(  d => d.HScode.indexOf(query) == 0  ) );
 		}else {
 			// else search by descriptive text (incl. HS code)
 			syncResults( HScodes.filter( 
-				d => d.Description.toLowerCase().indexOf(query) != -1 
+				d => d.description.toLowerCase().indexOf(query) != -1 
 			) );
 		}
 	}
 });
 
 function addOurData(hscode,container){
-	csv$1('./data/unified.csv').then( response => {
+	csv$1('./data/unified-data.csv').then( response => {
 		const record = response.find( r => r.HScode == hscode );
-		if ( ! record ) { 
+		console.log(record);
+		if ( record.hasEstimatedGain != 'TRUE' ) { 
 			container.append('p')
 				.text('Not affected by the CPTPP. Find a tariff at ')
 				.append('a').attr('href','https://www.tariffinder.ca')
 				.text('tariffinder.ca');
 			return 
 		}
-		// get provincial data
-		const gains = provinces.map( prov => {
+		// get region data
+		const gains = regions.map( prov => {
 			return {
 				'name': prov.full,
-				'gain': 1000 * record[`${prov.abbr} Gain - no export promotion`],
-				'change': 0.01 * record[`${prov.abbr}%`]
+				'gain': record[`${prov.abbr}gain`],
+				'change': record[`${prov.abbr}gainPercent`]
 			}
 		}).sort((a,b)=>b.gain-a.gain);
-		// add Canada data to the front
-		gains.unshift({
-			'name': 'Canada',
-			'gain': record['Total Canada Gain - no export promotion'] * 1000,
-			'change': record['Total Canada Gain %'] / 100
-		});
 		// append data to DOM
 		container.append('h3').text('Tariff Rate');
-		const newRate = record['Japan Rate for Canada TPP'] - 1;
-		const prevRate = record['Tariff before CPTPP'];
 		let para = container.append('p');
 		para.append('del')
 			.attr('id','oldTariffRate')
 			.attr('title','Tariff rate prior to CPTPP')
-			.text(TRF.format(prevRate));
+			.text(TRF.format(record.initialTariffRate));
 		para.append('span')
 			.attr('id','newTariffRate')
 			.attr('title','Current tariff rate under CPTPP')
-			.text(TRF.format(newRate));
+			.text(TRF.format(record.tariffRate));
 		container
 			.append('h3')
 			.text('Expected Gain for Canada and the Western Provinces');
