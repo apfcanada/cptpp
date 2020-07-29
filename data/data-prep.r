@@ -46,6 +46,10 @@ initialRates = read_csv(paste0(path,'sources/Tariff Start and End.csv')) %>%
 newData = results %>%
 	full_join( initialRates, by='HScode') %>%
 	full_join( allTrade, by='HScode' ) %>% 
+	mutate(
+		description = ifelse( is.na(description), altDescription, description )
+	) %>%
+	select( - altDescription ) %>%
 	arrange(
 		!hasEstimatedGain, # negation for true first order
 		-tradeValue # largest first
