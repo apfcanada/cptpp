@@ -6,20 +6,13 @@ import { select } from 'd3-selection'
 var params = new URLSearchParams( window.location.search );
 const HScode = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
 
-const NUM = new Intl.NumberFormat('en-CA');
-const USD = new Intl.NumberFormat(
-	'en-CA',
-	{
-		style:'currency',
-		currency:'USD',
-		currencyDisplay:'symbol',
-		minimumFractionDigits:0
-	}
-);
-const PCT = new Intl.NumberFormat(
-	'en-CA',{style:'percent',signDisplay:'exceptZero'}
-);
-const TRF = new Intl.NumberFormat('en-CA',{style:'percent',maximumFractionDigits:2});
+const USD = new Intl.NumberFormat( 'en-CA',
+	{ style: 'currency', currency: 'USD', currencyDisplay: 'symbol',
+	minimumFractionDigits: 0, maximumFractionDigits: 0 } );
+const PCT = new Intl.NumberFormat( 'en-CA',
+	{ style: 'percent', signDisplay: 'exceptZero' } );
+const TRF = new Intl.NumberFormat('en-CA',
+	{ style: 'percent', maximumFractionDigits: 2 } );
 
 const regions = [
 	{abbr:'CA',full:'Canada'},
@@ -30,7 +23,7 @@ const regions = [
 ]
 
 // if previously submitted, render data
-if (HScode) {
+if (HScode) { 
 	const infoBox = select('#category-info')
 	const title = infoBox.append('h2').text(HScode)
 	const desc = infoBox.append('p').attr('id','HSdescription')
@@ -41,8 +34,7 @@ if (HScode) {
 }
 
 // create the search box, populated with data
-csv('./data/unified-data.csv').then( response => {
-	const HScodes = response//.filter( d=> d.tradeValue >= 5000 )
+csv('./data/unified-data.csv').then( HScodes => {
 	// enter the description for the selected code
 	if (HScode) {
 		let code = HScodes.find( d => d.HScode == HScode )
@@ -112,7 +104,7 @@ function addOurData(hscode,container){
 			.append('thead')
 			.append('tr')
 			.selectAll('th')
-			.data(['','Gain (USD)','Change from baseline'])
+			.data(['','Gain','Change from baseline'])
 			.join('th')
 			.text(d=>d)
 		const rows = table
@@ -123,7 +115,7 @@ function addOurData(hscode,container){
 			.style('font-weight', p => p.name == 'Canada' ? 'bold' : null )
 		rows.append('td').text( p => p.name )
 		rows.append('td')
-			.text( p => p.gain > 0 ? NUM.format(p.gain) : 'None')
+			.text( p => p.gain > 0 ? USD.format(p.gain) : 'None')
 			.style('text-align','right')
 		rows.append('td')
 			.text( p => p.gain > 0 ? PCT.format(p.change): 'NA' )
@@ -165,7 +157,7 @@ function addComtradeData(hscode,container){
 			.append('thead')
 			.append('tr')
 			.selectAll('th')
-			.data(['Country','Rank','Value of Exports (USD)'])
+			.data(['Country','Rank','Value of Exports'])
 			.join('th')
 			.text(t=>t)
 		const rows = table.append('tbody')
@@ -177,7 +169,7 @@ function addComtradeData(hscode,container){
 		rows.append('td').text(d=>d.ptTitle)
 		rows.append('td').text( d => d.rank )
 		rows.append('td')
-			.text( d => NUM.format(d.TradeValue) )
+			.text( d => USD.format(d.TradeValue) )
 			.style('text-align','right')
 	})
 }
