@@ -40,8 +40,9 @@ if (HScode) {
 }
 
 // create the search box, populated with data
-csv('./data/canada-to-japan-trade-2019.csv').then( response => {
+csv('./data/unified.csv').then( response => {
 	const HScodes = response.filter( d=> d.TradeValue >= 5000 )
+	console.log(HScodes)
 	if (HScode) {
 		let code = HScodes.find( d => d.HScode == HScode )
 		if ( code ) { select('p#HSdescription').text( code.Description ) }
@@ -72,8 +73,8 @@ csv('./data/canada-to-japan-trade-2019.csv').then( response => {
 })
 
 function addOurData(hscode,container){
-	csv('./data/the-data.csv').then( response => {
-		const record = response.find( r => r.HS6 == `'${hscode}` )
+	csv('./data/unified.csv').then( response => {
+		const record = response.find( r => r.HScode == hscode )
 		if ( ! record ) { 
 			container.append('p')
 				.text('Not affected by the CPTPP. Find a tariff at ')
