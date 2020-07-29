@@ -1129,7 +1129,11 @@ csv$1('./data/unified-data.csv').then( HScodes => {
 		name: 'hs6',
 		templates: { 
 			inputValue: d => d ? d.HScode : ' ',
-			suggestion: d => d ? `${d.HScode} - ${d.description}` : ' '
+			suggestion: d => {
+				let text = `${d.HScode} - ${d.description}`;
+				if(d.hasEstimatedGain){ return text }
+				return `<span style="color:gray;">${text}</span>`
+			}
 		}
 	});
 	function suggest (query, syncResults) {
