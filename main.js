@@ -1,6 +1,8 @@
 import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
+import { stack } from 'd3-shape'
+import { scaleLinear } from 'd3-scale'
 
 // formatting
 const USD = new Intl.NumberFormat( 'en-CA',
@@ -69,18 +71,18 @@ function updatePage(data){
 	select('#noEffect').style('display', data.CAgain==''?'block':'none')
 	// get region data if available
 	const gains = [
-		{abbr:'CA',full:'Canada'},
 		{abbr:'BC',full:'British Columbia'},
 		{abbr:'AB',full:'Alberta'},
 		{abbr:'SK',full:'Saskatchewan'},
-		{abbr:'MB',full:'Manitoba'}
+		{abbr:'MB',full:'Manitoba'},
+		{abbr:'ROC',full:'Rest of Canada'}
 	].map( reg => {
 		return {
 			'name': reg.full,
-			'gain': data[`${reg.abbr}gain`],
-			'change': data[`${reg.abbr}gainPercent`]
+			'gain': Number(data[`${reg.abbr}gain`]),
+			'change': Number(data[`${reg.abbr}gainPercent`])
 		}
-	}).sort((a,b)=>b.gain-a.gain)
+	}).filter( d => d.gain > 0 )
 	select('#expectedGains')
 		.style('display', data.CAgain == '' ? 'none' : null )
 		.select('table#regionalGains tbody')
@@ -95,6 +97,31 @@ function updatePage(data){
 			d.gain > 0 ? PCT.format(d.change): 'NA'
 		] )
 		.join('td').text(t=>t)
+		
+	// make a chart of provincial gains
+	const svg = select('svg#bars')
+	const width = svg.attr('width')
+	const height = svg.attr('height')
+	const barHeight = 15;
+	const totalGain = gains.reduce((a,b)=>a+b.gain,0)
+	console.log(totalGain)
+	const xPos = scaleLinear()
+		.domain( [ 0, totalGain ] )
+		.range([0,width])
+	const yPos = scaleLinear()
+		.domain([0,gains.length-1])
+		.range([0,height-barHeight])
+	const col = scaleLinear()
+		.domain([0,gains.length])
+		.range(['red','yellow'])
+	const bars = svg.selectAll('g').data(gains).join('g')
+		.attr('transform',(d,i)=>`translate(0,${yPos(i)})`)
+	bars.append('rect')
+		.attr('fill',(d,i)=>col(i))
+		.attr('width', d => xPos(d.gain) )
+		.attr('height','10')
+		.attr('title',d=>d.name)
+
 }
 
 function addComtradeData(HScode){
