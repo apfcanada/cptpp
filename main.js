@@ -39,16 +39,25 @@ csv('./data/unified-data.csv').then( HScodes => {
 			) )
 		}
 	}
+	// once set up (with data loaded) check for existing search
+	checkURL(HScodes)
 })
 
-// get query parameter of any previous search
-//var params = new URLSearchParams( window.location.search );
-//var HScode = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
+function checkURL(data){
+	const params = new URLSearchParams( location.search )
+	var HScode = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
+	if(HScode) updatePage( data.find(d=>d.HScode == HScode) )
+}
 
 function updatePage(data){
 	if(!data) return
 	console.log(data)
-	addComtradeData(data)
+	// update the URL with the select HScode
+	const params = new URLSearchParams(location.search)
+	params.set('hs6',data.HScode)
+	window.history.replaceState({},'',`${location.pathname}?${params}`)
+//	var code = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
+	addComtradeData(data.HScode)
 	select('#infoBox').style('display','block')
 	select('h2#HS').text(data.HScode)
 	select('p#HSdescription').text(data.description)
@@ -88,7 +97,7 @@ function updatePage(data){
 		.join('td').text(t=>t)
 }
 
-function addComtradeData(data){
+function addComtradeData(HScode){
 	updateTable([])
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
@@ -97,9 +106,9 @@ function addComtradeData(data){
 		'freq':'A', // annual data
 		'ps':'now', // latest time period
 		'px':'HS',  // search by HS code
-		'cc':data.HScode, // selected HS code
+		'cc':HScode, // selected HS code
 		'rg':1,     // imports only
-		'max':500   // max records returned
+		'max':300   // max records returned
 	})		
 	let url = `https://comtrade.un.org/api/get?${params}`
 	json(url).then( response => {
@@ -130,4 +139,3 @@ function addComtradeData(data){
 			.join('td').text(t=>t)
 	}
 }
-
