@@ -2,10 +2,7 @@ import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
 
-// get query parameter of any previous search
-var params = new URLSearchParams( window.location.search );
-const HScode = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
-
+// formatting
 const USD = new Intl.NumberFormat( 'en-CA',
 	{ style: 'currency', currency: 'USD', currencyDisplay: 'symbol',
 	minimumFractionDigits: 0, maximumFractionDigits: 0 } );
@@ -14,22 +11,8 @@ const PCT = new Intl.NumberFormat( 'en-CA',
 const TRF = new Intl.NumberFormat('en-CA',
 	{ style: 'percent', maximumFractionDigits: 2 } );
 
-const regions = [
-	{abbr:'CA',full:'Canada'},
-	{abbr:'BC',full:'British Columbia'},
-	{abbr:'AB',full:'Alberta'},
-	{abbr:'SK',full:'Saskatchewan'},
-	{abbr:'MB',full:'Manitoba'}
-]
-
 // create the search box, populated with data
 csv('./data/unified-data.csv').then( HScodes => {
-	// enter the description for the selected code
-	if (HScode) {
-		let code = HScodes.find( d => d.HScode == HScode )
-		if ( code ) { select('p#HSdescription').text( code.description ) }
-	}
-	// enable easier, accessible selections
 	accessibleAutocomplete({
 		element: document.querySelector('#hs6select'),
 		id: '#hs6select',
@@ -58,6 +41,10 @@ csv('./data/unified-data.csv').then( HScodes => {
 	}
 })
 
+// get query parameter of any previous search
+//var params = new URLSearchParams( window.location.search );
+//var HScode = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
+
 function updatePage(data){
 	if(!data) return
 	console.log(data)
@@ -72,11 +59,17 @@ function updatePage(data){
 	// display link if no estimated gains
 	select('#noEffect').style('display', data.CAgain==''?'block':'none')
 	// get region data if available
-	const gains = regions.map( prov => {
+	const gains = [
+		{abbr:'CA',full:'Canada'},
+		{abbr:'BC',full:'British Columbia'},
+		{abbr:'AB',full:'Alberta'},
+		{abbr:'SK',full:'Saskatchewan'},
+		{abbr:'MB',full:'Manitoba'}
+	].map( reg => {
 		return {
-			'name': prov.full,
-			'gain': data[`${prov.abbr}gain`],
-			'change': data[`${prov.abbr}gainPercent`]
+			'name': reg.full,
+			'gain': data[`${reg.abbr}gain`],
+			'change': data[`${reg.abbr}gainPercent`]
 		}
 	}).sort((a,b)=>b.gain-a.gain)
 	select('#expectedGains')
