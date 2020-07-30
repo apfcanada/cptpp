@@ -67,16 +67,13 @@ function updatePage(data){
 	select('#infoBox').style('display','block')
 	select('h2#HS').text(data.HScode)
 	select('p#HSdescription').text(data.description)
+	// don't show tariffs if not available
+	select('#tariffs').style('display',data.tariffRate==''?'none':'block')
 	select('#oldTariffRate').text( TRF.format(data.initialTariffRate))
 	select('#newTariffRate').text( TRF.format(data.tariffRate) )
-	
-	if ( data.hasEstimatedGain == 'FALSE' ) { 
-		return select('p#noEffect')
-			.text('Not affected by the CPTPP. Find a tariff at ')
-			.append('a').attr('href','https://www.tariffinder.ca')
-			.text('tariffinder.ca')
-	}
-	// get region data
+	// display link if no estimated gains
+	select('#noEffect').style('display', data.CAgain==''?'block':'none')
+	// get region data if available
 	const gains = regions.map( prov => {
 		return {
 			'name': prov.full,
@@ -84,9 +81,11 @@ function updatePage(data){
 			'change': data[`${prov.abbr}gainPercent`]
 		}
 	}).sort((a,b)=>b.gain-a.gain)
-	select('table#regionalGains tbody')
+	select('#expectedGains')
+		.style('display', data.CAgain == '' ? 'none' : null )
+		.select('table#regionalGains tbody')
 		.selectAll('tr')
-		.data(gains)//.id(d=>d.abbr)
+		.data( gains, d => d.abbr )
 		.join('tr')
 		.style('font-weight', d => d.name == 'Canada' ? 'bold' : null )
 		.selectAll('td')
@@ -95,12 +94,11 @@ function updatePage(data){
 			d.gain > 0 ? USD.format(d.gain) : 'None',
 			d.gain > 0 ? PCT.format(d.change): 'NA'
 		] )
-		.join('td')
-		.text(t=>t)
+		.join('td').text(t=>t)
 }
 
 function addComtradeData(data){
-	let container = select('#comtradeData')
+	updateTable([])
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
 		'r':392,    // data reported by/for Japan
@@ -115,7 +113,9 @@ function addComtradeData(data){
 	let url = `https://comtrade.un.org/api/get?${params}`
 	json(url).then( response => {
 		const data = response.dataset.sort((a,b)=>b.TradeValue-a.TradeValue)
-		if ( data.length < 2 ) { return container.append('p').text('No data') }
+		if ( data.length < 2 ) { 
+			return select('#comtradeData').append('p').text('No data') 
+		}
 		// assign rankings based on the sort order
 		data.map((country,index)=> country['rank'] = index )
 		const world = data.shift() // 'world' should always be the largest (rank=0)
@@ -123,16 +123,20 @@ function addComtradeData(data){
 		// get Canada's position
 		const canIndex = data.findIndex( d => d.ptTitle == 'Canada' )
 		const topN = data.slice(0, canIndex+1 >= 5 ? canIndex+1 : 5 )
-		container.select('p#loading').remove()
+		select('#comtradeData p#loading').remove()
+		updateTable(topN)
+	})
+	function updateTable(newData){
 		// create a table for results
-		container.select('table tbody')
+		select('#comtradeData table tbody')
 			.selectAll('tr')
-			.data(topN)
+			.data(newData)
 			.join('tr')
 			.style('display',d=>d.rank<=4||d.ptTitle=='Canada'?null:'none')
 			.style('font-weight',d=>d.ptTitle=='Canada'?'bold':null)
 			.selectAll('td')
 			.data( d=> [ d.ptTitle, d.rank, USD.format(d.TradeValue) ] )
 			.join('td').text(t=>t)
-	})
+	}
 }
+
