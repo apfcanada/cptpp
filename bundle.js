@@ -1127,14 +1127,12 @@ csv$1('./data/unified-data.csv').then( HScodes => {
 		onConfirm: updatePage
 	});
 	function suggest (query, syncResults) {
-		query = query.toLowerCase();
 		if ( /^\d+$/.test(query) ) {
-			// if fully numeric, search by HS code only
+			// if fully numeric, search by HS code only, starting from front
 			syncResults( HScodes.filter(  d => d.HScode.indexOf(query) == 0  ) );
-		}else {
-			// else search by descriptive text (incl. HS code)
+		}else { // else search by descriptive text
 			syncResults( HScodes.filter( 
-				d => d.description.toLowerCase().indexOf(query) != -1 
+				d => d.description.toLowerCase().indexOf(query.toLowerCase()) != -1 
 			) );
 		}
 	}
