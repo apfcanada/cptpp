@@ -8,19 +8,49 @@
 		<meta name="keywords" content="CPTPP">
 		<link rel="stylesheet" href="styles/main.css"/>
 		<link rel="stylesheet" href="styles/accessible-autocomplete.min.css">
+		<script src="bundle.js"></script>
 	</head>
 	<body>
 	
 		<h1>CPTPP Product Competitiveness Tracker</h1>
 		<h2>Exports from Canada to Japan</h2>
-		<form action="" method="get">
+		<form onsubmit="return false">
 			<label for="hs6select">
 				Search a product category by six-digit HS code or description
 			</label>
 			<div id="hs6select"></div>
-		</form>		
-		<div id="category-info"></div>
+		</form>
+		
+		<div id="infoBox">
+			<h2 id="HS"></h2>
+			<p id="HSdescription"></p>
+			<p id="noEffect"></p>
+			<h3>Tariff Rate</h3>
+			<p>
+				<del id="oldTariffRate" title="Tariff rate prior to CPTPP"></del>
+				<span id="newTariffRate" title="Current tariff rate under CPTPP"></span>
+			</p>
+			<h3>Expected Gain for Canada and the Western Provinces</h3>
+			<table id="regionalGains">
+					<thead>
+						<th></th>
+						<th>Gain</th>
+						<th>Change from baseline</th>
+					</thead>
+					<tbody></tbody>
+				</table>
+			<div id="comtradeData">
+				<h3>Top Global Exporters to Japan <span id="latestYear"></span></h3>
+				<table>
+					<thead>
+						<th>Country</th>
+						<th>Rank</th>
+						<th>Value of Exports</th>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+		</div>
 		
 	</body>
-	<script src="bundle.js"></script>
 </html>
