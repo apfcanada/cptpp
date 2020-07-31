@@ -1,7 +1,7 @@
 import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
-import { stack } from 'd3-shape'
+//import { stack } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 
 // formatting
@@ -12,6 +12,14 @@ const PCT = new Intl.NumberFormat( 'en-CA',
 	{ style: 'percent', signDisplay: 'exceptZero' } );
 const TRF = new Intl.NumberFormat('en-CA',
 	{ style: 'percent', maximumFractionDigits: 2 } );
+	
+const regions = [
+	{abbr:'BC', name:'British Columbia',color:'#f58220'},
+	{abbr:'AB', name:'Alberta',         color:'#da1f46'},
+	{abbr:'SK', name:'Saskatchewan',    color:'#485865'},
+	{abbr:'MB', name:'Manitoba',        color:'#a7a9ac'},
+	{abbr:'ROC',name:'Rest of Canada',  color:'#111111'}
+]
 
 // create the search box, populated with data
 csv('./data/unified-data.csv').then( HScodes => {
@@ -69,25 +77,16 @@ function updatePage(data){
 	select('#newTariffRate').text( TRF.format(data.tariffRate) )
 	// display link if no estimated gains
 	select('#noEffect').style('display', data.CAgain==''?'block':'none')
-	// get region data if available
-	const gains = [
-		{abbr:'BC',full:'British Columbia'},
-		{abbr:'AB',full:'Alberta'},
-		{abbr:'SK',full:'Saskatchewan'},
-		{abbr:'MB',full:'Manitoba'},
-		{abbr:'ROC',full:'Rest of Canada'}
-	].map( reg => {
-		return {
-			'name': reg.full,
-			'gain': Number(data[`${reg.abbr}gain`]),
-			'change': Number(data[`${reg.abbr}gainPercent`])
-		}
-	}).filter( d => d.gain > 0 )
+	// set additional region data specific to product category
+	regions.map( reg => {
+		reg['gain'] = Number(data[`${reg.abbr}gain`])
+		reg['change'] = Number(data[`${reg.abbr}gainPercent`])
+	})
 	select('#expectedGains')
 		.style('display', data.CAgain == '' ? 'none' : null )
 		.select('table#regionalGains tbody')
 		.selectAll('tr')
-		.data( gains, d => d.abbr )
+		.data( regions, r => r.abbr )
 		.join('tr')
 		.style('font-weight', d => d.name == 'Canada' ? 'bold' : null )
 		.selectAll('td')
@@ -98,26 +97,26 @@ function updatePage(data){
 		] )
 		.join('td').text(t=>t)
 		
-	// make a chart of provincial gains
+	// make a chart of regional gains
 	const svg = select('svg#bars')
 	const width = svg.attr('width')
 	const height = svg.attr('height')
 	const barHeight = 15;
-	const totalGain = gains.reduce((a,b)=>a+b.gain,0)
+	const totalGain = regions.reduce((a,b)=>a+b.gain,0)
 	console.log(totalGain)
 	const xPos = scaleLinear()
 		.domain( [ 0, totalGain ] )
 		.range([0,width])
 	const yPos = scaleLinear()
-		.domain([0,gains.length-1])
+		.domain([0,regions.length-1])
 		.range([0,height-barHeight])
 	const col = scaleLinear()
-		.domain([0,gains.length])
+		.domain([0,regions.length])
 		.range(['red','yellow'])
-	const bars = svg.selectAll('g').data(gains).join('g')
+	const bars = svg.selectAll('g').data(regions).join('g')
 		.attr('transform',(d,i)=>`translate(0,${yPos(i)})`)
 	bars.append('rect')
-		.attr('fill',(d,i)=>col(i))
+		.attr('fill',d=>d.color)
 		.attr('width', d => xPos(d.gain) )
 		.attr('height','10')
 		.attr('title',d=>d.name)
