@@ -2386,9 +2386,12 @@ function updatePage(data){
 	// display link if no estimated gains
 	select('#noEffect').style('display', data.CAgain==''?'block':'none');
 	// set additional region data specific to product category
-	regions.map( reg => {
+	regions.map( (reg,i,a) => {
 		reg['gain'] = Number(data[`${reg.abbr}gain`]);
-		reg['change'] = Number(data[`${reg.abbr}gainPercent`]);
+		reg['change'] = Number(data[`${reg.abbr}gainPercent`]),
+		// add attributes used for the share mapping
+		reg['prevCumGain'] = i > 0 ? a[i-1].cumGain : 0,
+		reg['cumGain'] = reg.gain + reg.prevCumGain;
 	});
 	select('#expectedGains')
 		.style('display', data.CAgain == '' ? 'none' : null )
@@ -2404,25 +2407,21 @@ function updatePage(data){
 			d.gain > 0 ? PCT.format(d.change): 'NA'
 		] )
 		.join('td').text(t=>t);
-		
-	// make a chart of provincial gains
+	// make a chart of regional gains
 	const svg = select('svg#bars');
 	const width = svg.attr('width');
 	const height = svg.attr('height');
-	const barHeight = 15;
 	const totalGain = regions.reduce((a,b)=>a+b.gain,0);
-	console.log(totalGain);
 	const xPos = linear$1()
 		.domain( [ 0, totalGain ] )
 		.range([0,width]);
-	const yPos = linear$1()
-		.domain([0,regions.length-1])
-		.range([0,height-barHeight]);
-	const col = linear$1()
-		.domain([0,regions.length])
-		.range(['red','yellow']);
-	const bars = svg.selectAll('g').data(regions).join('g')
-		.attr('transform',(d,i)=>`translate(0,${yPos(i)})`);
+	const bars = svg
+		.selectAll('g')
+		.data(regions)
+		.join('g')
+		.attr('transform',d=>{
+			return `translate(${xPos(d.prevCumGain)},0)`
+		});
 	bars.append('rect')
 		.attr('fill',d=>d.color)
 		.attr('width', d => xPos(d.gain) )
