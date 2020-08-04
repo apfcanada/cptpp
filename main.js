@@ -1,7 +1,7 @@
 import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
-import { stack } from 'd3-shape'
+import { stack, area } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 
 // formatting
@@ -126,16 +126,17 @@ function updatePage(data){
 
 function addComtradeData(HScode){
 	updateTable([])
+	const years = [2019,2018,2017,2016,2015]
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
 		'r':392,    // data reported by/for Japan
 		'p':'all',  // for all partner regions
 		'freq':'A', // annual data
-		'ps':'now', // latest time period
+		'ps':years.join(','), // time period
 		'px':'HS',  // search by HS code
 		'cc':HScode, // selected HS code
 		'rg':1,     // imports only
-		'max':300   // max records returned
+		'max':1000   // max records returned
 	})		
 	let url = `https://comtrade.un.org/api/get?${params}`
 	json(url).then( response => {
@@ -143,15 +144,41 @@ function addComtradeData(HScode){
 		if ( data.length < 2 ) { 
 			return select('#comtradeData').append('p').text('No data') 
 		}
-		// assign rankings based on the sort order
-		data.map((country,index)=> country['rank'] = index )
-		const world = data.shift() // 'world' should always be the largest (rank=0)
-		select('span#latestYear').text(` (${world.period})`)
-		// get Canada's position
-		const canIndex = data.findIndex( d => d.ptTitle == 'Canada' )
-		const topN = data.slice(0, canIndex+1 >= 5 ? canIndex+1 : 5 )
-		select('#comtradeData p#loading').remove()
-		updateTable(topN)
+		// the data needs to be formatted and organized for the stack generator
+		const allCountries = new Set( data.map(r=>r.ptTitle) )
+		// TODO remove 'World'
+		const annualTrade = years.map( year => {
+			let shares = {'year':year}
+			for ( let country of allCountries ){
+				let record = data.find( d => d.yr==year && d.ptTitle==country )
+				shares[country] = record ? record.TradeValue : 0
+			}
+			return shares
+		})
+		// apply the stack generator
+		let series = stack().keys([...allCountries])(annualTrade)
+		console.log(series)
+		// make a chart of annual trade per country
+		const svg = select('svg#annualTrade')
+		const width = svg.attr('width')
+		const height = svg.attr('height')
+		const maxAnnualTrade = Math.max( ...data.map(r=>r.TradeValue) ) 
+		const xPos = scaleLinear() // time/year axis
+			.domain([Math.min(...years),Math.max(...years)])
+			.range([0,width])
+		const yPos = scaleLinear() // value axis
+			.domain([0,maxAnnualTrade])
+			.range([0,height])
+		const areaGen = area()
+			.x( d => xPos(d.data.year) )
+			.y0( d => yPos(d[0]) )
+			.y1( d => yPos(d[1]) )
+		svg.selectAll('path')
+			.data(series)
+			.join('path')
+			.attr('fill','#999')
+			.attr('d',areaGen)
+			.append('title').text(d=>d.key) // country name	
 	})
 	function updateTable(newData){
 		// create a table for results
@@ -163,6 +190,6 @@ function addComtradeData(HScode){
 			.style('font-weight',d=>d.ptTitle=='Canada'?'bold':null)
 			.selectAll('td')
 			.data( d=> [ d.ptTitle, d.rank, USD.format(d.TradeValue) ] )
-			.join('td').text(t=>t)
+			.join('td').text(t=>t.key)
 	}
 }
