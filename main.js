@@ -99,6 +99,7 @@ function updatePage(data){
 			d.gain > 0 ? PCT.format(d.change): 'NA'
 		] )
 		.join('td').text(t=>t)
+	/*
 	// make a chart of regional gains
 	const svg = select('svg#bars')
 	const width = svg.attr('width')
@@ -120,7 +121,7 @@ function updatePage(data){
 		.attr('width', d => xPos(d.gain) )
 		.attr('height','10')
 		.attr('title',d=>d.name)
-
+	*/
 }
 
 function addComtradeData(HScode){
