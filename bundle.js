@@ -1483,6 +1483,71 @@ function stack() {
   return stack;
 }
 
+function stackOffsetWiggle(series, order) {
+  if (!((n = series.length) > 0) || !((m = (s0 = series[order[0]]).length) > 0)) return;
+  for (var y = 0, j = 1, s0, m, n; j < m; ++j) {
+    for (var i = 0, s1 = 0, s2 = 0; i < n; ++i) {
+      var si = series[order[i]],
+          sij0 = si[j][1] || 0,
+          sij1 = si[j - 1][1] || 0,
+          s3 = (sij0 - sij1) / 2;
+      for (var k = 0; k < i; ++k) {
+        var sk = series[order[k]],
+            skj0 = sk[j][1] || 0,
+            skj1 = sk[j - 1][1] || 0;
+        s3 += skj0 - skj1;
+      }
+      s1 += sij0, s2 += s3 * sij0;
+    }
+    s0[j - 1][1] += s0[j - 1][0] = y;
+    if (s1) y -= s2 / s1;
+  }
+  s0[j - 1][1] += s0[j - 1][0] = y;
+  none$1(series, order);
+}
+
+function appearance(series) {
+  var peaks = series.map(peak);
+  return none$2(series).sort(function(a, b) { return peaks[a] - peaks[b]; });
+}
+
+function peak(series) {
+  var i = -1, j = 0, n = series.length, vi, vj = -Infinity;
+  while (++i < n) if ((vi = +series[i][1]) > vj) vj = vi, j = i;
+  return j;
+}
+
+function sum(series) {
+  var s = 0, i = -1, n = series.length, v;
+  while (++i < n) if (v = +series[i][1]) s += v;
+  return s;
+}
+
+function stackOrderInsideOut(series) {
+  var n = series.length,
+      i,
+      j,
+      sums = series.map(sum),
+      order = appearance(series),
+      top = 0,
+      bottom = 0,
+      tops = [],
+      bottoms = [];
+
+  for (i = 0; i < n; ++i) {
+    j = order[i];
+    if (top < bottom) {
+      top += sums[j];
+      tops.push(j);
+    } else {
+      bottom += sums[j];
+      bottoms.push(j);
+    }
+  }
+
+  return bottoms.reverse().concat(tops);
+}
+
 function ascending$1(a, b) {
   return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 }
@@ -2879,7 +2944,6 @@ function updatePage(data){
 }
 
 function addComtradeData(HScode){
-	updateTable([]);
 	const years = [2019,2018,2017,2016,2015];
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
@@ -2911,24 +2975,28 @@ function addComtradeData(HScode){
 			return shares
 		});
 		// apply the stack generator
-		let series = stack().keys([...allCountries])(annualTrade);
+		let series = stack()
+			.keys([...allCountries])
+			.order(stackOrderInsideOut)
+			.offset(stackOffsetWiggle)
+			(annualTrade);
 		// make a chart of annual trade per country
 		const svg = select('svg#annualTrade');
 		const width = svg.attr('width');
 		const height = svg.attr('height');
-		const xPos = linear$1() // time/year axis
+		const yPos = linear$1() // time axis
 			.domain([Math.min(...years),Math.max(...years)])
-			.range([0,width]);
-		const yPos = linear$1() // value axis
+			.range([height,0]);
+		const xPos = linear$1() //  trade value axis
 			.domain([0,maxAnnualTrade])
-			.range([0,height]);
+			.range([0,width]);
 		const colors = ordinal()
 			.domain([...allCountries])
 			.range(['yellow','orange','red','purple','blue','green']);
 		const areaGen = area()
-			.x( d => xPos(d.data.year) )
-			.y0( d => yPos(d[0]) )
-			.y1( d => yPos(d[1]) );
+			.y( d => yPos(d.data.year) )
+			.x0( d => xPos(d[0]) )
+			.x1( d => xPos(d[1]) );
 		svg.selectAll('path')
 			.data(series)
 			.join('path')
@@ -2936,16 +3004,4 @@ function addComtradeData(HScode){
 			.attr('d',areaGen)
 			.append('title').text(d=>d.key); // country name	
 	});
-	function updateTable(newData){
-		// create a table for results
-		select('#comtradeData table tbody')
-			.selectAll('tr')
-			.data(newData)
-			.join('tr')
-			.style('display',d=>d.rank<=4||d.ptTitle=='Canada'?null:'none')
-			.style('font-weight',d=>d.ptTitle=='Canada'?'bold':null)
-			.selectAll('td')
-			.data( d=> [ d.ptTitle, d.rank, USD.format(d.TradeValue) ] )
-			.join('td').text(t=>t.key);
-	}
 }

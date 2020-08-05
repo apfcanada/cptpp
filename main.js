@@ -1,7 +1,11 @@
 import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
-import { stack, area } from 'd3-shape'
+import { 
+	stack, area, 
+	stackOffsetWiggle,
+	stackOrderInsideOut 
+} from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 
 // formatting
@@ -125,7 +129,6 @@ function updatePage(data){
 }
 
 function addComtradeData(HScode){
-	updateTable([])
 	const years = [2019,2018,2017,2016,2015]
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
@@ -157,24 +160,28 @@ function addComtradeData(HScode){
 			return shares
 		})
 		// apply the stack generator
-		let series = stack().keys([...allCountries])(annualTrade)
+		let series = stack()
+			.keys([...allCountries])
+			.order(stackOrderInsideOut)
+			.offset(stackOffsetWiggle)
+			(annualTrade)
 		// make a chart of annual trade per country
 		const svg = select('svg#annualTrade')
 		const width = svg.attr('width')
 		const height = svg.attr('height')
-		const xPos = scaleLinear() // time/year axis
+		const yPos = scaleLinear() // time axis
 			.domain([Math.min(...years),Math.max(...years)])
-			.range([0,width])
-		const yPos = scaleLinear() // value axis
+			.range([height,0])
+		const xPos = scaleLinear() //  trade value axis
 			.domain([0,maxAnnualTrade])
-			.range([0,height])
+			.range([0,width])
 		const colors = scaleOrdinal()
 			.domain([...allCountries])
 			.range(['yellow','orange','red','purple','blue','green'])
 		const areaGen = area()
-			.x( d => xPos(d.data.year) )
-			.y0( d => yPos(d[0]) )
-			.y1( d => yPos(d[1]) )
+			.y( d => yPos(d.data.year) )
+			.x0( d => xPos(d[0]) )
+			.x1( d => xPos(d[1]) )
 		svg.selectAll('path')
 			.data(series)
 			.join('path')
@@ -182,16 +189,4 @@ function addComtradeData(HScode){
 			.attr('d',areaGen)
 			.append('title').text(d=>d.key) // country name	
 	})
-	function updateTable(newData){
-		// create a table for results
-		select('#comtradeData table tbody')
-			.selectAll('tr')
-			.data(newData)
-			.join('tr')
-			.style('display',d=>d.rank<=4||d.ptTitle=='Canada'?null:'none')
-			.style('font-weight',d=>d.ptTitle=='Canada'?'bold':null)
-			.selectAll('td')
-			.data( d=> [ d.ptTitle, d.rank, USD.format(d.TradeValue) ] )
-			.join('td').text(t=>t.key)
-	}
 }
