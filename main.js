@@ -1,7 +1,7 @@
 import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
-import { stack, area, stackOrderInsideOut } from 'd3-shape'
+import { stack, area, stackOrderInsideOut, curveNatural } from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { axisRight, axisBottom } from 'd3-axis'
 import { schemeAccent } from 'd3-scale-chromatic'
@@ -169,6 +169,7 @@ function addComtradeData(HScode){
 			.y( d => Y(d.data.year) )
 			.x0( d => X(d[0]) )
 			.x1( d => X(d[1]) )
+			.curve(curveNatural)
 		// apply the stack generator
 		let series = stack()
 			.keys([...topPartners])
