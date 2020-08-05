@@ -1483,29 +1483,6 @@ function stack() {
   return stack;
 }
 
-function stackOffsetWiggle(series, order) {
-  if (!((n = series.length) > 0) || !((m = (s0 = series[order[0]]).length) > 0)) return;
-  for (var y = 0, j = 1, s0, m, n; j < m; ++j) {
-    for (var i = 0, s1 = 0, s2 = 0; i < n; ++i) {
-      var si = series[order[i]],
-          sij0 = si[j][1] || 0,
-          sij1 = si[j - 1][1] || 0,
-          s3 = (sij0 - sij1) / 2;
-      for (var k = 0; k < i; ++k) {
-        var sk = series[order[k]],
-            skj0 = sk[j][1] || 0,
-            skj1 = sk[j - 1][1] || 0;
-        s3 += skj0 - skj1;
-      }
-      s1 += sij0, s2 += s3 * sij0;
-    }
-    s0[j - 1][1] += s0[j - 1][0] = y;
-    if (s1) y -= s2 / s1;
-  }
-  s0[j - 1][1] += s0[j - 1][0] = y;
-  none$1(series, order);
-}
-
 function appearance(series) {
   var peaks = series.map(peak);
   return none$2(series).sort(function(a, b) { return peaks[a] - peaks[b]; });
@@ -2823,6 +2800,14 @@ function linear$1() {
   return linearish(scale);
 }
 
+function colors(specifier) {
+  var n = specifier.length / 6 | 0, colors = new Array(n), i = 0;
+  while (i < n) colors[i] = "#" + specifier.slice(i * 6, ++i * 6);
+  return colors;
+}
+
+var schemeAccent = colors("7fc97fbeaed4fdc086ffff99386cb0f0027fbf5b17666666");
+
 // formatting
 const USD = new Intl.NumberFormat( 'en-CA',
 	{ style: 'currency', currency: 'USD', currencyDisplay: 'symbol',
@@ -2943,10 +2928,11 @@ function addComtradeData(HScode){
 		);
 		// find any trade partners constituting >=5% of total trade in a year
 		const topPartners = new Set(['Canada']);
+		const minShare = 0.05;
 		years.map( year => { 
 			let world = data.find(p => p.yr==year && p.ptTitle=='World');
 			data.filter(p => p.yr==year && p.ptTitle!='World').map( p => {
-				if( p.TradeValue >= 0.05 * world.TradeValue ){
+				if( p.TradeValue >= minShare * world.TradeValue ){
 					topPartners.add(p.ptTitle);
 				}
 			});
@@ -2957,17 +2943,14 @@ function addComtradeData(HScode){
 			let otherTrade = yearData
 				.filter( d => ! topPartners.has(d.ptTitle) && d.ptTitle != 'World' )
 				.reduce( (a,b) => a + b.TradeValue, 0 );
-			let trade = { 
-				'year': year, 
-				'Other': otherTrade, 
-				'Total': yearData.find(d=>d.ptTitle=='World').TradeValue
-			};			
+			let trade = { 'year': year, 'Other': otherTrade };			
 			for ( let partner of topPartners ){
 				let record = yearData.find( d => d.ptTitle==partner );
 				trade[partner] = record ? record.TradeValue : 0;
 			}
 			return trade
 		} );
+		console.log(annualTrade);
 		topPartners.add('Other');
 		// construct the chart
 		const svg = select('svg#annualTrade');
@@ -2982,7 +2965,7 @@ function addComtradeData(HScode){
 			.range([0,width-margin.right]);
 		const colors = ordinal()
 			.domain([...topPartners])
-			.range(['yellow','orange','red','purple','blue','green']);
+			.range(schemeAccent);
 		const areaGen = area()
 			.y( d => Y(d.data.year) )
 			.x0( d => X(d[0]) )
@@ -2992,7 +2975,6 @@ function addComtradeData(HScode){
 		let series = stack()
 			.keys([...topPartners])
 			.order(stackOrderInsideOut)
-			.offset(stackOffsetWiggle)
 			(annualTrade);
 		svg.selectAll('path')
 			.data(series)

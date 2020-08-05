@@ -3,11 +3,11 @@ import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
 import { 
 	stack, area, 
-	stackOffsetWiggle,
 	stackOrderInsideOut 
 } from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { axisRight } from 'd3-axis'
+import { schemeAccent } from 'd3-scale-chromatic'
 
 // formatting
 const USD = new Intl.NumberFormat( 'en-CA',
@@ -129,10 +129,11 @@ function addComtradeData(HScode){
 		)
 		// find any trade partners constituting >=5% of total trade in a year
 		const topPartners = new Set(['Canada'])
+		const minShare = 0.05
 		years.map( year => { 
 			let world = data.find(p => p.yr==year && p.ptTitle=='World')
 			data.filter(p => p.yr==year && p.ptTitle!='World').map( p => {
-				if( p.TradeValue >= 0.05 * world.TradeValue ){
+				if( p.TradeValue >= minShare * world.TradeValue ){
 					topPartners.add(p.ptTitle)
 				}
 			})
@@ -143,17 +144,14 @@ function addComtradeData(HScode){
 			let otherTrade = yearData
 				.filter( d => ! topPartners.has(d.ptTitle) && d.ptTitle != 'World' )
 				.reduce( (a,b) => a + b.TradeValue, 0 )
-			let trade = { 
-				'year': year, 
-				'Other': otherTrade, 
-				'Total': yearData.find(d=>d.ptTitle=='World').TradeValue
-			}			
+			let trade = { 'year': year, 'Other': otherTrade }			
 			for ( let partner of topPartners ){
 				let record = yearData.find( d => d.ptTitle==partner )
 				trade[partner] = record ? record.TradeValue : 0
 			}
 			return trade
 		} )
+		console.log(annualTrade)
 		topPartners.add('Other')
 		// construct the chart
 		const svg = select('svg#annualTrade')
@@ -168,7 +166,7 @@ function addComtradeData(HScode){
 			.range([0,width-margin.right])
 		const colors = scaleOrdinal()
 			.domain([...topPartners])
-			.range(['yellow','orange','red','purple','blue','green'])
+			.range(schemeAccent)
 		const areaGen = area()
 			.y( d => Y(d.data.year) )
 			.x0( d => X(d[0]) )
@@ -180,7 +178,6 @@ function addComtradeData(HScode){
 		let series = stack()
 			.keys([...topPartners])
 			.order(stackOrderInsideOut)
-			.offset(stackOffsetWiggle)
 			(annualTrade)
 		svg.selectAll('path')
 			.data(series)
