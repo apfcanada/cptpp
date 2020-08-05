@@ -1,13 +1,11 @@
 import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
-import { 
-	stack, area, 
-	stackOrderInsideOut 
-} from 'd3-shape'
+import { stack, area, stackOrderInsideOut } from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
-import { axisRight } from 'd3-axis'
+import { axisRight, axisBottom } from 'd3-axis'
 import { schemeAccent } from 'd3-scale-chromatic'
+import { format } from 'd3-format'
 
 // formatting
 const USD = new Intl.NumberFormat( 'en-CA',
@@ -155,15 +153,15 @@ function addComtradeData(HScode){
 		topPartners.add('Other')
 		// construct the chart
 		const svg = select('svg#annualTrade')
-		const margin = {top: 0, right: 40, bottom: 0, left: 0}
+		const margin = {top: 5, right: 60, bottom: 40, left: 10}
 		const width = svg.attr('width')
 		const height = svg.attr('height')
 		const Y = scaleLinear() // time axis
-			.domain([Math.min(...years),Math.max(...years)])
-			.range([height,0])
+			.domain( [ Math.min(...years), Math.max(...years) ] )
+			.range( [ height - margin.bottom, 0 + margin.top ] )
 		const X = scaleLinear() //  trade value axis
-			.domain([0,maxAnnualTrade])
-			.range([0,width-margin.right])
+			.domain( [ 0, maxAnnualTrade ] )
+			.range( [ 0 + margin.left, width - margin.right ] )
 		const colors = scaleOrdinal()
 			.domain([...topPartners])
 			.range(schemeAccent)
@@ -171,10 +169,7 @@ function addComtradeData(HScode){
 			.y( d => Y(d.data.year) )
 			.x0( d => X(d[0]) )
 			.x1( d => X(d[1]) )
-			
-		const yAxis = axisRight(Y)
-			//.tickValues(years)
-				// apply the stack generator
+		// apply the stack generator
 		let series = stack()
 			.keys([...topPartners])
 			.order(stackOrderInsideOut)
@@ -185,6 +180,17 @@ function addComtradeData(HScode){
 			.attr('fill', (d,i) => colors(i) )
 			.attr('d',areaGen)
 			.append('title').text(d=>d.key) // country name	
+		// add the axes
+		svg.append('g')
+			.attr('transform',`translate(${width-margin.right},0)`)
+			.call(
+				axisRight(Y)
+					.tickValues( years )
+					.tickFormat( format('.4') )
+			)
+		svg.append('g')
+			.attr('transform',`translate(0,${height-margin.bottom})`)
+			.call( axisBottom(X).ticks(8,'$.2~s') )
 	})
 }
 
