@@ -2936,18 +2936,39 @@ function addComtradeData(HScode){
 			return console.log('no comtrade data supplied') 
 		}
 		// start slicing up the data	
-		const maxAnnualTrade = Math.max( ...data.map(r=>r.TradeValue) );
+		const maxAnnualTrade = Math.max( ...
+			data
+				.filter( p => p.ptTitle=='World')
+				.map( p => p.TradeValue)
+		);
+		// find any trade partners constituting >=5% of total trade in a year
+		const topPartners = new Set(['Canada']);
+		years.map( year => { 
+			let world = data.find(p => p.yr==year && p.ptTitle=='World');
+			data.filter(p => p.yr==year && p.ptTitle!='World').map( p => {
+				if( p.TradeValue >= 0.05 * world.TradeValue ){
+					topPartners.add(p.ptTitle);
+				}
+			});
+		} );
 		// the data needs to be formatted and organized for the stack generator
-		const partners = new Set( data.map( r => r.ptTitle) );
 		const annualTrade = years.map( year => {
-			let trade = {'year':year};
-			for ( let partner of partners ){
-				let record = data.find( d => d.yr==year && d.ptTitle==partner );
+			let yearData = data.filter( d => d.yr==year );
+			let otherTrade = yearData
+				.filter( d => ! topPartners.has(d.ptTitle) && d.ptTitle != 'World' )
+				.reduce( (a,b) => a + b.TradeValue, 0 );
+			let trade = { 
+				'year': year, 
+				'Other': otherTrade, 
+				'Total': yearData.find(d=>d.ptTitle=='World').TradeValue
+			};			
+			for ( let partner of topPartners ){
+				let record = yearData.find( d => d.ptTitle==partner );
 				trade[partner] = record ? record.TradeValue : 0;
 			}
 			return trade
-		});
-		partners.delete('World');
+		} );
+		topPartners.add('Other');
 		// construct the chart
 		const svg = select('svg#annualTrade');
 		const margin = {top: 0, right: 40, bottom: 0, left: 0};
@@ -2960,7 +2981,7 @@ function addComtradeData(HScode){
 			.domain([0,maxAnnualTrade])
 			.range([0,width-margin.right]);
 		const colors = ordinal()
-			.domain([...partners])
+			.domain([...topPartners])
 			.range(['yellow','orange','red','purple','blue','green']);
 		const areaGen = area()
 			.y( d => Y(d.data.year) )
@@ -2969,7 +2990,7 @@ function addComtradeData(HScode){
 			//.tickValues(years)
 				// apply the stack generator
 		let series = stack()
-			.keys([...partners])
+			.keys([...topPartners])
 			.order(stackOrderInsideOut)
 			.offset(stackOffsetWiggle)
 			(annualTrade);
