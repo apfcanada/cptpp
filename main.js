@@ -7,6 +7,7 @@ import {
 	stackOrderInsideOut 
 } from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { axisRight } from 'd3-axis'
 
 // formatting
 const USD = new Intl.NumberFormat( 'en-CA',
@@ -103,85 +104,63 @@ function updatePage(data){
 			d.gain > 0 ? PCT.format(d.change): 'NA'
 		] )
 		.join('td').text(t=>t)
-	/*
-	// make a chart of regional gains
-	const svg = select('svg#bars')
-	const width = svg.attr('width')
-	const height = svg.attr('height')
-	const barHeight = 15;
-	const totalGain = regions.reduce((a,b)=>a+b.gain,0)
-	const xPos = scaleLinear()
-		.domain( [ 0, totalGain ] )
-		.range([0,width])
-	const bars = svg
-		.selectAll('g')
-		.data(regions)
-		.join('g')
-		.attr('transform',d=>{
-			return `translate(${xPos(d.prevCumGain)},0)`
-		})
-	bars.append('rect')
-		.attr('fill',d=>d.color)
-		.attr('width', d => xPos(d.gain) )
-		.attr('height','10')
-		.attr('title',d=>d.name)
-	*/
 }
 
 function addComtradeData(HScode){
+	// use UN comtrade data to construct a chart showing each county's 
+	// share of total annual trade with Japan 
 	const years = [2019,2018,2017,2016,2015]
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
-		'r':392,    // data reported by/for Japan
-		'p':'all',  // for all partner regions
-		'freq':'A', // annual data
-		'ps':years.join(','), // time period
-		'px':'HS',  // search by HS code
-		'cc':HScode, // selected HS code
-		'rg':1,     // imports only
-		'max':1000   // max records returned
-	})		
-	let url = `https://comtrade.un.org/api/get?${params}`
-	json(url).then( response => {
-		const data = response.dataset.sort((a,b)=>b.TradeValue-a.TradeValue)
-		if ( data.length < 2 ) { 
-			return select('#comtradeData').append('p').text('No data') 
+		'r':392,'rg':1,'p':'all', // imports reported by Japan from all regions
+		'freq':'A', 'ps':years.join(','), // annual data for the selected years
+		'px':'HS', 'cc':HScode  // search by HS code
+	})
+	json(`https://comtrade.un.org/api/get?${params}`).then( response => {
+		const data = response.dataset
+		if ( data.length < 1 ) { 
+			return console.log('no comtrade data supplied') 
 		}
-		const maxAnnualTrade = Math.max( ...data.map(r=>r.TradeValue) ) 
+		// start slicing up the data	
+		const maxAnnualTrade = Math.max( ...data.map(r=>r.TradeValue) )
 		// the data needs to be formatted and organized for the stack generator
-		const allCountries = new Set( data.map(r=>r.ptTitle) )
-		allCountries.delete('World')
+		const partners = new Set( data.map( r => r.ptTitle) )
 		const annualTrade = years.map( year => {
-			let shares = {'year':year}
-			for ( let country of allCountries ){
-				let record = data.find( d => d.yr==year && d.ptTitle==country )
-				shares[country] = record ? record.TradeValue : 0
+			let trade = {'year':year}
+			for ( let partner of partners ){
+				let record = data.find( d => d.yr==year && d.ptTitle==partner )
+				trade[partner] = record ? record.TradeValue : 0
 			}
-			return shares
+			return trade
 		})
-		// apply the stack generator
+		partners.delete('World')
+		// construct the chart
+		const svg = select('svg#annualTrade')
+		const margin = {top: 0, right: 40, bottom: 0, left: 0}
+		const width = svg.attr('width')
+		const height = svg.attr('height')
+		const Y = scaleLinear() // time axis
+			.domain([Math.min(...years),Math.max(...years)])
+			.range([height,0])
+		const X = scaleLinear() //  trade value axis
+			.domain([0,maxAnnualTrade])
+			.range([0,width-margin.right])
+		const colors = scaleOrdinal()
+			.domain([...partners])
+			.range(['yellow','orange','red','purple','blue','green'])
+		const areaGen = area()
+			.y( d => Y(d.data.year) )
+			.x0( d => X(d[0]) )
+			.x1( d => X(d[1]) )
+			
+		const yAxis = axisRight(Y)
+			//.tickValues(years)
+				// apply the stack generator
 		let series = stack()
-			.keys([...allCountries])
+			.keys([...partners])
 			.order(stackOrderInsideOut)
 			.offset(stackOffsetWiggle)
 			(annualTrade)
-		// make a chart of annual trade per country
-		const svg = select('svg#annualTrade')
-		const width = svg.attr('width')
-		const height = svg.attr('height')
-		const yPos = scaleLinear() // time axis
-			.domain([Math.min(...years),Math.max(...years)])
-			.range([height,0])
-		const xPos = scaleLinear() //  trade value axis
-			.domain([0,maxAnnualTrade])
-			.range([0,width])
-		const colors = scaleOrdinal()
-			.domain([...allCountries])
-			.range(['yellow','orange','red','purple','blue','green'])
-		const areaGen = area()
-			.y( d => yPos(d.data.year) )
-			.x0( d => xPos(d[0]) )
-			.x1( d => xPos(d[1]) )
 		svg.selectAll('path')
 			.data(series)
 			.join('path')
@@ -190,3 +169,4 @@ function addComtradeData(HScode){
 			.append('title').text(d=>d.key) // country name	
 	})
 }
+
