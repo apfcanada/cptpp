@@ -2,7 +2,7 @@ import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv, json } from 'd3-fetch'
 import { select } from 'd3-selection'
 import { stack, area } from 'd3-shape'
-import { scaleLinear } from 'd3-scale'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
 
 // formatting
 const USD = new Intl.NumberFormat( 'en-CA',
@@ -144,9 +144,10 @@ function addComtradeData(HScode){
 		if ( data.length < 2 ) { 
 			return select('#comtradeData').append('p').text('No data') 
 		}
+		const maxAnnualTrade = Math.max( ...data.map(r=>r.TradeValue) ) 
 		// the data needs to be formatted and organized for the stack generator
 		const allCountries = new Set( data.map(r=>r.ptTitle) )
-		// TODO remove 'World'
+		allCountries.delete('World')
 		const annualTrade = years.map( year => {
 			let shares = {'year':year}
 			for ( let country of allCountries ){
@@ -157,18 +158,19 @@ function addComtradeData(HScode){
 		})
 		// apply the stack generator
 		let series = stack().keys([...allCountries])(annualTrade)
-		console.log(series)
 		// make a chart of annual trade per country
 		const svg = select('svg#annualTrade')
 		const width = svg.attr('width')
 		const height = svg.attr('height')
-		const maxAnnualTrade = Math.max( ...data.map(r=>r.TradeValue) ) 
 		const xPos = scaleLinear() // time/year axis
 			.domain([Math.min(...years),Math.max(...years)])
 			.range([0,width])
 		const yPos = scaleLinear() // value axis
 			.domain([0,maxAnnualTrade])
 			.range([0,height])
+		const colors = scaleOrdinal()
+			.domain([...allCountries])
+			.range(['yellow','orange','red','purple','blue','green'])
 		const areaGen = area()
 			.x( d => xPos(d.data.year) )
 			.y0( d => yPos(d[0]) )
@@ -176,7 +178,7 @@ function addComtradeData(HScode){
 		svg.selectAll('path')
 			.data(series)
 			.join('path')
-			.attr('fill','#999')
+			.attr('fill', (d,i) => colors(i) )
 			.attr('d',areaGen)
 			.append('title').text(d=>d.key) // country name	
 	})

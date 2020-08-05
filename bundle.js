@@ -1584,6 +1584,51 @@ function initRange(domain, range) {
   return this;
 }
 
+const implicit = Symbol("implicit");
+
+function ordinal() {
+  var index = new Map(),
+      domain = [],
+      range = [],
+      unknown = implicit;
+
+  function scale(d) {
+    var key = d + "", i = index.get(key);
+    if (!i) {
+      if (unknown !== implicit) return unknown;
+      index.set(key, i = domain.push(d));
+    }
+    return range[(i - 1) % range.length];
+  }
+
+  scale.domain = function(_) {
+    if (!arguments.length) return domain.slice();
+    domain = [], index = new Map();
+    for (const value of _) {
+      const key = value + "";
+      if (index.has(key)) continue;
+      index.set(key, domain.push(value));
+    }
+    return scale;
+  };
+
+  scale.range = function(_) {
+    return arguments.length ? (range = Array.from(_), scale) : range.slice();
+  };
+
+  scale.unknown = function(_) {
+    return arguments.length ? (unknown = _, scale) : unknown;
+  };
+
+  scale.copy = function() {
+    return ordinal(domain, range).unknown(unknown);
+  };
+
+  initRange.apply(scale, arguments);
+
+  return scale;
+}
+
 function define(constructor, factory, prototype) {
   constructor.prototype = factory.prototype = prototype;
   prototype.constructor = constructor;
@@ -2853,9 +2898,10 @@ function addComtradeData(HScode){
 		if ( data.length < 2 ) { 
 			return select('#comtradeData').append('p').text('No data') 
 		}
+		const maxAnnualTrade = Math.max( ...data.map(r=>r.TradeValue) ); 
 		// the data needs to be formatted and organized for the stack generator
 		const allCountries = new Set( data.map(r=>r.ptTitle) );
-		// TODO remove 'World'
+		allCountries.delete('World');
 		const annualTrade = years.map( year => {
 			let shares = {'year':year};
 			for ( let country of allCountries ){
@@ -2866,18 +2912,19 @@ function addComtradeData(HScode){
 		});
 		// apply the stack generator
 		let series = stack().keys([...allCountries])(annualTrade);
-		console.log(series);
 		// make a chart of annual trade per country
 		const svg = select('svg#annualTrade');
 		const width = svg.attr('width');
 		const height = svg.attr('height');
-		const maxAnnualTrade = Math.max( ...data.map(r=>r.TradeValue) ); 
 		const xPos = linear$1() // time/year axis
 			.domain([Math.min(...years),Math.max(...years)])
 			.range([0,width]);
 		const yPos = linear$1() // value axis
 			.domain([0,maxAnnualTrade])
 			.range([0,height]);
+		const colors = ordinal()
+			.domain([...allCountries])
+			.range(['yellow','orange','red','purple','blue','green']);
 		const areaGen = area()
 			.x( d => xPos(d.data.year) )
 			.y0( d => yPos(d[0]) )
@@ -2885,7 +2932,7 @@ function addComtradeData(HScode){
 		svg.selectAll('path')
 			.data(series)
 			.join('path')
-			.attr('fill','#999')
+			.attr('fill', (d,i) => colors(i) )
 			.attr('d',areaGen)
 			.append('title').text(d=>d.key); // country name	
 	});
