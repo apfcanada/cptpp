@@ -66,7 +66,7 @@ function updatePage(data){
 	params.set('hs6',data.HScode)
 	window.history.replaceState({},'',`${location.pathname}?${params}`)
 //	var code = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
-	addComtradeData(data.HScode)
+	addComtradeData(data.HScode,'svg#annualTrade')
 	select('#infoBox').style('display','block')
 	select('h2#HS').text(data.HScode)
 	select('p#HSdescription').text(data.description)

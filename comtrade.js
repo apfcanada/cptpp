@@ -1,98 +1,153 @@
+// use UN comtrade data to construct an SVG chart showing each major trading 
+// partner's share of total annual trade in a commodity with Japan 
+
 import { json } from 'd3-fetch'
 import { select } from 'd3-selection'
 import { stack, area, stackOrderInsideOut, curveNatural } from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { axisRight, axisBottom } from 'd3-axis'
 import { schemeAccent } from 'd3-scale-chromatic'
-import { format } from 'd3-format'
+import { timeParse, timeFormat } from 'd3-time-format'
 
-export function addComtradeData(HScode){
-	// use UN comtrade data to construct a chart showing each county's 
-	// share of total annual trade with Japan 
-	const years = [2019,2018,2017,2016,2015]
+const YMparse = timeParse('%Y%m')
+const YMformat = timeFormat('%Y%m')
+
+export async function addComtradeData( HScode, SVGselector ){
+
+	// access the chart
+	const svg = select(SVGselector)
+	const margin = {top: 5, right: 60, bottom: 40, left: 10}
+	const width = svg.attr('width')
+	const height = svg.attr('height')
+
+	// get data for ALL PERIODS for up to five major partners
+	// [ World, Canada, USA, China, Thailand ]
+	const majorPlayers = [0,124,842,156,764]
+	const allTimeCall = formatAPIcall2(HScode,majorPlayers)
+	const allTimeData = await json(allTimeCall)
+	
+	// find all available date and value ranges 
+	// ( to set up the scales and axes )
+	let periods = [ ... new Set( allTimeData.dataset.map( d => d.period ) ) ]
+	periods = periods
+		.map( period => YMparse( `${period}` ) )
+		.sort( (a,b) => a - b )
+	let maxTradeValue = Math.max( ... 
+		allTimeData.dataset
+			.filter( d => d.ptTitle == 'World' )
+			.map( d => d.TradeValue )
+	)
+	
+	// create the scales and axes
+	const Y = scaleLinear() // time axis
+		.domain( [ Math.min(...periods), Math.max(...periods) ] )
+		.range( [ height - margin.bottom, 0 + margin.top ] )
+		
+	const X = scaleLinear() //  trade value axis
+		.domain( [ 0, maxTradeValue ] )
+		.range( [ 0 + margin.left, width - margin.right ] )
+	svg.append('g')
+		.attr('transform',`translate(${width-margin.right},0)`)
+		.call(
+			axisRight(Y)
+				.tickFormat( timeFormat('%Y') )
+		)
+	svg.append('g')
+		.attr('transform',`translate(0,${height-margin.bottom})`)
+		.call( axisBottom(X).ticks(8,'$.2~s') )
+	
+	// now format the data and add the areas
+	let [ trade, partners ] = formatData( allTimeData.dataset, periods )
+	
+	console.log(trade)
+	console.log(partners)
+	
+	const colors = scaleOrdinal()
+		.domain([...partners])
+		.range(schemeAccent)
+	const areaGen = area()
+		.y( d => Y(d.data.period) )
+		.x0( d => X(d[0]) )
+		.x1( d => X(d[1]) )
+		.curve(curveNatural)
+	// apply the stack generator
+	let series = stack().keys([...partners])(trade)
+	svg.append('g')
+		.attr('id','dataSpace')
+		.selectAll('path')
+		.data(series)
+		.join('path')
+		.attr('fill', (d,i) => colors(i) )
+		.attr('d',areaGen)
+		.append('title').text(d=>d.key) // country name	
+	
+	return
+	
+}
+	
+	// 2. data for ALL PARTNER COUNTRIES for recent time periods
+	//const call2 = formatAPIcall2(HScode,['all'],['recent'])
+	// 3. data for MAJOR RECENT PARTNERS at ALL TIMES
+
+
+
+//		// find any trade partners constituting >=5% of total trade in a year
+//		const topPartners = new Set(['Canada'])
+//		const minShare = 0.05
+//		years.map( year => { 
+//			let world = data.find(p => p.yr==year && p.ptTitle=='World')
+//			data.filter(p => p.yr==year && p.ptTitle!='World').map( p => {
+//				if( p.TradeValue >= minShare * world.TradeValue ){
+//					topPartners.add(p.ptTitle)
+//				}
+//			})
+//		} )
+
+
+function formatAPIcall(HScode,years){
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
 		'r':392,'rg':1,'p':'all', // imports reported by Japan from all regions
 		'freq':'A', 'ps':years.join(','), // annual data for the selected years
 		'px':'HS', 'cc':HScode  // search by HS code
 	})
-	json(`https://comtrade.un.org/api/get?${params}`).then( response => {
-		const data = response.dataset
-		if ( data.length < 1 ) { 
-			return console.log('no comtrade data supplied') 
-		}
-		// start slicing up the data	
-		const maxAnnualTrade = Math.max( ...
-			data
-				.filter( p => p.ptTitle=='World')
-				.map( p => p.TradeValue)
-		)
-		// find any trade partners constituting >=5% of total trade in a year
-		const topPartners = new Set(['Canada'])
-		const minShare = 0.05
-		years.map( year => { 
-			let world = data.find(p => p.yr==year && p.ptTitle=='World')
-			data.filter(p => p.yr==year && p.ptTitle!='World').map( p => {
-				if( p.TradeValue >= minShare * world.TradeValue ){
-					topPartners.add(p.ptTitle)
-				}
-			})
-		} )
-		// the data needs to be formatted and organized for the stack generator
-		const annualTrade = years.map( year => {
-			let yearData = data.filter( d => d.yr==year )
-			let otherTrade = yearData
-				.filter( d => ! topPartners.has(d.ptTitle) && d.ptTitle != 'World' )
-				.reduce( (a,b) => a + b.TradeValue, 0 )
-			let trade = { 'year': year, 'Other': otherTrade }			
-			for ( let partner of topPartners ){
-				let record = yearData.find( d => d.ptTitle==partner )
-				trade[partner] = record ? record.TradeValue : 0
-			}
-			return trade
-		} )
-		console.log(annualTrade)
-		topPartners.add('Other')
-		// construct the chart
-		const svg = select('svg#annualTrade')
-		const margin = {top: 5, right: 60, bottom: 40, left: 10}
-		const width = svg.attr('width')
-		const height = svg.attr('height')
-		const Y = scaleLinear() // time axis
-			.domain( [ Math.min(...years), Math.max(...years) ] )
-			.range( [ height - margin.bottom, 0 + margin.top ] )
-		const X = scaleLinear() //  trade value axis
-			.domain( [ 0, maxAnnualTrade ] )
-			.range( [ 0 + margin.left, width - margin.right ] )
-		const colors = scaleOrdinal()
-			.domain([...topPartners])
-			.range(schemeAccent)
-		const areaGen = area()
-			.y( d => Y(d.data.year) )
-			.x0( d => X(d[0]) )
-			.x1( d => X(d[1]) )
-			.curve(curveNatural)
-		// apply the stack generator
-		let series = stack()
-			.keys([...topPartners])
-			.order(stackOrderInsideOut)
-			(annualTrade)
-		svg.selectAll('path')
-			.data(series)
-			.join('path')
-			.attr('fill', (d,i) => colors(i) )
-			.attr('d',areaGen)
-			.append('title').text(d=>d.key) // country name	
-		// add the axes
-		svg.append('g')
-			.attr('transform',`translate(${width-margin.right},0)`)
-			.call(
-				axisRight(Y)
-					.tickValues( years )
-					.tickFormat( format('.4') )
-			)
-		svg.append('g')
-			.attr('transform',`translate(0,${height-margin.bottom})`)
-			.call( axisBottom(X).ticks(8,'$.2~s') )
-	})
+	return `https://comtrade.un.org/api/get?${params}`
 }
+
+function formatAPIcall2( HScode, partners=['all'], periods=['all'] ){
+	// https://comtrade.un.org/Data/Doc/API
+	let params = new URLSearchParams({
+		'r': 392,    // reporter = japan 
+		'rg': 1,     // imports (to Japan)
+		'p': partners.join(','), // partner regions
+		'freq': 'M', // monthly 
+		'ps': periods.join(','), // data for all periods
+		'px': 'HS', 'cc':HScode  // search by HS code
+	})
+	return `https://comtrade.un.org/api/get?${params}`
+}
+
+function formatData( dataset, periods ){
+	// the data needs to be formatted and organized for the stack generator
+	let partners = new Set( dataset.map(d=>d.ptTitle) )
+	partners.delete('World')
+	
+	const allTrade = periods.map( period => {
+		let periodData = dataset
+			.filter( d => `${d.period}` == YMformat(period) )
+		let worldTrade = periodData.find( d => d.ptTitle == 'World' ).TradeValue
+		let partnerTrade = periodData
+			.filter( d => d.ptTitle != 'World' )
+			.reduce( (a,b) => a + b.TradeValue, 0 )
+		let trade = { 'period': period, 'Other': worldTrade - partnerTrade }
+		for ( let partner of partners ){
+			let record = periodData.find( d => d.ptTitle == partner )
+			trade[partner] = record ? record.TradeValue : 0
+		}
+		return trade
+	} )
+	partners.add('Other')
+	return [ allTrade, partners ]
+}
+
+

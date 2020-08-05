@@ -1551,48 +1551,6 @@ function stack() {
   return stack;
 }
 
-function appearance(series) {
-  var peaks = series.map(peak);
-  return none$2(series).sort(function(a, b) { return peaks[a] - peaks[b]; });
-}
-
-function peak(series) {
-  var i = -1, j = 0, n = series.length, vi, vj = -Infinity;
-  while (++i < n) if ((vi = +series[i][1]) > vj) vj = vi, j = i;
-  return j;
-}
-
-function sum(series) {
-  var s = 0, i = -1, n = series.length, v;
-  while (++i < n) if (v = +series[i][1]) s += v;
-  return s;
-}
-
-function stackOrderInsideOut(series) {
-  var n = series.length,
-      i,
-      j,
-      sums = series.map(sum),
-      order = appearance(series),
-      top = 0,
-      bottom = 0,
-      tops = [],
-      bottoms = [];
-
-  for (i = 0; i < n; ++i) {
-    j = order[i];
-    if (top < bottom) {
-      top += sums[j];
-      tops.push(j);
-    } else {
-      bottom += sums[j];
-      bottoms.push(j);
-    }
-  }
-
-  return bottoms.reverse().concat(tops);
-}
-
 function ascending$1(a, b) {
   return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 }
@@ -2868,6 +2826,860 @@ function linear$1() {
   return linearish(scale);
 }
 
+var t0 = new Date,
+    t1 = new Date;
+
+function newInterval(floori, offseti, count, field) {
+
+  function interval(date) {
+    return floori(date = arguments.length === 0 ? new Date : new Date(+date)), date;
+  }
+
+  interval.floor = function(date) {
+    return floori(date = new Date(+date)), date;
+  };
+
+  interval.ceil = function(date) {
+    return floori(date = new Date(date - 1)), offseti(date, 1), floori(date), date;
+  };
+
+  interval.round = function(date) {
+    var d0 = interval(date),
+        d1 = interval.ceil(date);
+    return date - d0 < d1 - date ? d0 : d1;
+  };
+
+  interval.offset = function(date, step) {
+    return offseti(date = new Date(+date), step == null ? 1 : Math.floor(step)), date;
+  };
+
+  interval.range = function(start, stop, step) {
+    var range = [], previous;
+    start = interval.ceil(start);
+    step = step == null ? 1 : Math.floor(step);
+    if (!(start < stop) || !(step > 0)) return range; // also handles Invalid Date
+    do range.push(previous = new Date(+start)), offseti(start, step), floori(start);
+    while (previous < start && start < stop);
+    return range;
+  };
+
+  interval.filter = function(test) {
+    return newInterval(function(date) {
+      if (date >= date) while (floori(date), !test(date)) date.setTime(date - 1);
+    }, function(date, step) {
+      if (date >= date) {
+        if (step < 0) while (++step <= 0) {
+          while (offseti(date, -1), !test(date)) {} // eslint-disable-line no-empty
+        } else while (--step >= 0) {
+          while (offseti(date, +1), !test(date)) {} // eslint-disable-line no-empty
+        }
+      }
+    });
+  };
+
+  if (count) {
+    interval.count = function(start, end) {
+      t0.setTime(+start), t1.setTime(+end);
+      floori(t0), floori(t1);
+      return Math.floor(count(t0, t1));
+    };
+
+    interval.every = function(step) {
+      step = Math.floor(step);
+      return !isFinite(step) || !(step > 0) ? null
+          : !(step > 1) ? interval
+          : interval.filter(field
+              ? function(d) { return field(d) % step === 0; }
+              : function(d) { return interval.count(0, d) % step === 0; });
+    };
+  }
+
+  return interval;
+}
+
+var durationMinute = 6e4;
+var durationDay = 864e5;
+var durationWeek = 6048e5;
+
+var day = newInterval(function(date) {
+  date.setHours(0, 0, 0, 0);
+}, function(date, step) {
+  date.setDate(date.getDate() + step);
+}, function(start, end) {
+  return (end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * durationMinute) / durationDay;
+}, function(date) {
+  return date.getDate() - 1;
+});
+
+function weekday(i) {
+  return newInterval(function(date) {
+    date.setDate(date.getDate() - (date.getDay() + 7 - i) % 7);
+    date.setHours(0, 0, 0, 0);
+  }, function(date, step) {
+    date.setDate(date.getDate() + step * 7);
+  }, function(start, end) {
+    return (end - start - (end.getTimezoneOffset() - start.getTimezoneOffset()) * durationMinute) / durationWeek;
+  });
+}
+
+var sunday = weekday(0);
+var monday = weekday(1);
+var tuesday = weekday(2);
+var wednesday = weekday(3);
+var thursday = weekday(4);
+var friday = weekday(5);
+var saturday = weekday(6);
+
+var year = newInterval(function(date) {
+  date.setMonth(0, 1);
+  date.setHours(0, 0, 0, 0);
+}, function(date, step) {
+  date.setFullYear(date.getFullYear() + step);
+}, function(start, end) {
+  return end.getFullYear() - start.getFullYear();
+}, function(date) {
+  return date.getFullYear();
+});
+
+// An optimized implementation for this simple case.
+year.every = function(k) {
+  return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : newInterval(function(date) {
+    date.setFullYear(Math.floor(date.getFullYear() / k) * k);
+    date.setMonth(0, 1);
+    date.setHours(0, 0, 0, 0);
+  }, function(date, step) {
+    date.setFullYear(date.getFullYear() + step * k);
+  });
+};
+
+var utcDay = newInterval(function(date) {
+  date.setUTCHours(0, 0, 0, 0);
+}, function(date, step) {
+  date.setUTCDate(date.getUTCDate() + step);
+}, function(start, end) {
+  return (end - start) / durationDay;
+}, function(date) {
+  return date.getUTCDate() - 1;
+});
+
+function utcWeekday(i) {
+  return newInterval(function(date) {
+    date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 7 - i) % 7);
+    date.setUTCHours(0, 0, 0, 0);
+  }, function(date, step) {
+    date.setUTCDate(date.getUTCDate() + step * 7);
+  }, function(start, end) {
+    return (end - start) / durationWeek;
+  });
+}
+
+var utcSunday = utcWeekday(0);
+var utcMonday = utcWeekday(1);
+var utcTuesday = utcWeekday(2);
+var utcWednesday = utcWeekday(3);
+var utcThursday = utcWeekday(4);
+var utcFriday = utcWeekday(5);
+var utcSaturday = utcWeekday(6);
+
+var utcYear = newInterval(function(date) {
+  date.setUTCMonth(0, 1);
+  date.setUTCHours(0, 0, 0, 0);
+}, function(date, step) {
+  date.setUTCFullYear(date.getUTCFullYear() + step);
+}, function(start, end) {
+  return end.getUTCFullYear() - start.getUTCFullYear();
+}, function(date) {
+  return date.getUTCFullYear();
+});
+
+// An optimized implementation for this simple case.
+utcYear.every = function(k) {
+  return !isFinite(k = Math.floor(k)) || !(k > 0) ? null : newInterval(function(date) {
+    date.setUTCFullYear(Math.floor(date.getUTCFullYear() / k) * k);
+    date.setUTCMonth(0, 1);
+    date.setUTCHours(0, 0, 0, 0);
+  }, function(date, step) {
+    date.setUTCFullYear(date.getUTCFullYear() + step * k);
+  });
+};
+
+function localDate(d) {
+  if (0 <= d.y && d.y < 100) {
+    var date = new Date(-1, d.m, d.d, d.H, d.M, d.S, d.L);
+    date.setFullYear(d.y);
+    return date;
+  }
+  return new Date(d.y, d.m, d.d, d.H, d.M, d.S, d.L);
+}
+
+function utcDate(d) {
+  if (0 <= d.y && d.y < 100) {
+    var date = new Date(Date.UTC(-1, d.m, d.d, d.H, d.M, d.S, d.L));
+    date.setUTCFullYear(d.y);
+    return date;
+  }
+  return new Date(Date.UTC(d.y, d.m, d.d, d.H, d.M, d.S, d.L));
+}
+
+function newDate(y, m, d) {
+  return {y: y, m: m, d: d, H: 0, M: 0, S: 0, L: 0};
+}
+
+function formatLocale$1(locale) {
+  var locale_dateTime = locale.dateTime,
+      locale_date = locale.date,
+      locale_time = locale.time,
+      locale_periods = locale.periods,
+      locale_weekdays = locale.days,
+      locale_shortWeekdays = locale.shortDays,
+      locale_months = locale.months,
+      locale_shortMonths = locale.shortMonths;
+
+  var periodRe = formatRe(locale_periods),
+      periodLookup = formatLookup(locale_periods),
+      weekdayRe = formatRe(locale_weekdays),
+      weekdayLookup = formatLookup(locale_weekdays),
+      shortWeekdayRe = formatRe(locale_shortWeekdays),
+      shortWeekdayLookup = formatLookup(locale_shortWeekdays),
+      monthRe = formatRe(locale_months),
+      monthLookup = formatLookup(locale_months),
+      shortMonthRe = formatRe(locale_shortMonths),
+      shortMonthLookup = formatLookup(locale_shortMonths);
+
+  var formats = {
+    "a": formatShortWeekday,
+    "A": formatWeekday,
+    "b": formatShortMonth,
+    "B": formatMonth,
+    "c": null,
+    "d": formatDayOfMonth,
+    "e": formatDayOfMonth,
+    "f": formatMicroseconds,
+    "H": formatHour24,
+    "I": formatHour12,
+    "j": formatDayOfYear,
+    "L": formatMilliseconds,
+    "m": formatMonthNumber,
+    "M": formatMinutes,
+    "p": formatPeriod,
+    "q": formatQuarter,
+    "Q": formatUnixTimestamp,
+    "s": formatUnixTimestampSeconds,
+    "S": formatSeconds,
+    "u": formatWeekdayNumberMonday,
+    "U": formatWeekNumberSunday,
+    "V": formatWeekNumberISO,
+    "w": formatWeekdayNumberSunday,
+    "W": formatWeekNumberMonday,
+    "x": null,
+    "X": null,
+    "y": formatYear$1,
+    "Y": formatFullYear,
+    "Z": formatZone,
+    "%": formatLiteralPercent
+  };
+
+  var utcFormats = {
+    "a": formatUTCShortWeekday,
+    "A": formatUTCWeekday,
+    "b": formatUTCShortMonth,
+    "B": formatUTCMonth,
+    "c": null,
+    "d": formatUTCDayOfMonth,
+    "e": formatUTCDayOfMonth,
+    "f": formatUTCMicroseconds,
+    "H": formatUTCHour24,
+    "I": formatUTCHour12,
+    "j": formatUTCDayOfYear,
+    "L": formatUTCMilliseconds,
+    "m": formatUTCMonthNumber,
+    "M": formatUTCMinutes,
+    "p": formatUTCPeriod,
+    "q": formatUTCQuarter,
+    "Q": formatUnixTimestamp,
+    "s": formatUnixTimestampSeconds,
+    "S": formatUTCSeconds,
+    "u": formatUTCWeekdayNumberMonday,
+    "U": formatUTCWeekNumberSunday,
+    "V": formatUTCWeekNumberISO,
+    "w": formatUTCWeekdayNumberSunday,
+    "W": formatUTCWeekNumberMonday,
+    "x": null,
+    "X": null,
+    "y": formatUTCYear,
+    "Y": formatUTCFullYear,
+    "Z": formatUTCZone,
+    "%": formatLiteralPercent
+  };
+
+  var parses = {
+    "a": parseShortWeekday,
+    "A": parseWeekday,
+    "b": parseShortMonth,
+    "B": parseMonth,
+    "c": parseLocaleDateTime,
+    "d": parseDayOfMonth,
+    "e": parseDayOfMonth,
+    "f": parseMicroseconds,
+    "H": parseHour24,
+    "I": parseHour24,
+    "j": parseDayOfYear,
+    "L": parseMilliseconds,
+    "m": parseMonthNumber,
+    "M": parseMinutes,
+    "p": parsePeriod,
+    "q": parseQuarter,
+    "Q": parseUnixTimestamp,
+    "s": parseUnixTimestampSeconds,
+    "S": parseSeconds,
+    "u": parseWeekdayNumberMonday,
+    "U": parseWeekNumberSunday,
+    "V": parseWeekNumberISO,
+    "w": parseWeekdayNumberSunday,
+    "W": parseWeekNumberMonday,
+    "x": parseLocaleDate,
+    "X": parseLocaleTime,
+    "y": parseYear,
+    "Y": parseFullYear,
+    "Z": parseZone,
+    "%": parseLiteralPercent
+  };
+
+  // These recursive directive definitions must be deferred.
+  formats.x = newFormat(locale_date, formats);
+  formats.X = newFormat(locale_time, formats);
+  formats.c = newFormat(locale_dateTime, formats);
+  utcFormats.x = newFormat(locale_date, utcFormats);
+  utcFormats.X = newFormat(locale_time, utcFormats);
+  utcFormats.c = newFormat(locale_dateTime, utcFormats);
+
+  function newFormat(specifier, formats) {
+    return function(date) {
+      var string = [],
+          i = -1,
+          j = 0,
+          n = specifier.length,
+          c,
+          pad,
+          format;
+
+      if (!(date instanceof Date)) date = new Date(+date);
+
+      while (++i < n) {
+        if (specifier.charCodeAt(i) === 37) {
+          string.push(specifier.slice(j, i));
+          if ((pad = pads[c = specifier.charAt(++i)]) != null) c = specifier.charAt(++i);
+          else pad = c === "e" ? " " : "0";
+          if (format = formats[c]) c = format(date, pad);
+          string.push(c);
+          j = i + 1;
+        }
+      }
+
+      string.push(specifier.slice(j, i));
+      return string.join("");
+    };
+  }
+
+  function newParse(specifier, Z) {
+    return function(string) {
+      var d = newDate(1900, undefined, 1),
+          i = parseSpecifier(d, specifier, string += "", 0),
+          week, day$1;
+      if (i != string.length) return null;
+
+      // If a UNIX timestamp is specified, return it.
+      if ("Q" in d) return new Date(d.Q);
+      if ("s" in d) return new Date(d.s * 1000 + ("L" in d ? d.L : 0));
+
+      // If this is utcParse, never use the local timezone.
+      if (Z && !("Z" in d)) d.Z = 0;
+
+      // The am-pm flag is 0 for AM, and 1 for PM.
+      if ("p" in d) d.H = d.H % 12 + d.p * 12;
+
+      // If the month was not specified, inherit from the quarter.
+      if (d.m === undefined) d.m = "q" in d ? d.q : 0;
+
+      // Convert day-of-week and week-of-year to day-of-year.
+      if ("V" in d) {
+        if (d.V < 1 || d.V > 53) return null;
+        if (!("w" in d)) d.w = 1;
+        if ("Z" in d) {
+          week = utcDate(newDate(d.y, 0, 1)), day$1 = week.getUTCDay();
+          week = day$1 > 4 || day$1 === 0 ? utcMonday.ceil(week) : utcMonday(week);
+          week = utcDay.offset(week, (d.V - 1) * 7);
+          d.y = week.getUTCFullYear();
+          d.m = week.getUTCMonth();
+          d.d = week.getUTCDate() + (d.w + 6) % 7;
+        } else {
+          week = localDate(newDate(d.y, 0, 1)), day$1 = week.getDay();
+          week = day$1 > 4 || day$1 === 0 ? monday.ceil(week) : monday(week);
+          week = day.offset(week, (d.V - 1) * 7);
+          d.y = week.getFullYear();
+          d.m = week.getMonth();
+          d.d = week.getDate() + (d.w + 6) % 7;
+        }
+      } else if ("W" in d || "U" in d) {
+        if (!("w" in d)) d.w = "u" in d ? d.u % 7 : "W" in d ? 1 : 0;
+        day$1 = "Z" in d ? utcDate(newDate(d.y, 0, 1)).getUTCDay() : localDate(newDate(d.y, 0, 1)).getDay();
+        d.m = 0;
+        d.d = "W" in d ? (d.w + 6) % 7 + d.W * 7 - (day$1 + 5) % 7 : d.w + d.U * 7 - (day$1 + 6) % 7;
+      }
+
+      // If a time zone is specified, all fields are interpreted as UTC and then
+      // offset according to the specified time zone.
+      if ("Z" in d) {
+        d.H += d.Z / 100 | 0;
+        d.M += d.Z % 100;
+        return utcDate(d);
+      }
+
+      // Otherwise, all fields are in local time.
+      return localDate(d);
+    };
+  }
+
+  function parseSpecifier(d, specifier, string, j) {
+    var i = 0,
+        n = specifier.length,
+        m = string.length,
+        c,
+        parse;
+
+    while (i < n) {
+      if (j >= m) return -1;
+      c = specifier.charCodeAt(i++);
+      if (c === 37) {
+        c = specifier.charAt(i++);
+        parse = parses[c in pads ? specifier.charAt(i++) : c];
+        if (!parse || ((j = parse(d, string, j)) < 0)) return -1;
+      } else if (c != string.charCodeAt(j++)) {
+        return -1;
+      }
+    }
+
+    return j;
+  }
+
+  function parsePeriod(d, string, i) {
+    var n = periodRe.exec(string.slice(i));
+    return n ? (d.p = periodLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseShortWeekday(d, string, i) {
+    var n = shortWeekdayRe.exec(string.slice(i));
+    return n ? (d.w = shortWeekdayLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseWeekday(d, string, i) {
+    var n = weekdayRe.exec(string.slice(i));
+    return n ? (d.w = weekdayLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseShortMonth(d, string, i) {
+    var n = shortMonthRe.exec(string.slice(i));
+    return n ? (d.m = shortMonthLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseMonth(d, string, i) {
+    var n = monthRe.exec(string.slice(i));
+    return n ? (d.m = monthLookup[n[0].toLowerCase()], i + n[0].length) : -1;
+  }
+
+  function parseLocaleDateTime(d, string, i) {
+    return parseSpecifier(d, locale_dateTime, string, i);
+  }
+
+  function parseLocaleDate(d, string, i) {
+    return parseSpecifier(d, locale_date, string, i);
+  }
+
+  function parseLocaleTime(d, string, i) {
+    return parseSpecifier(d, locale_time, string, i);
+  }
+
+  function formatShortWeekday(d) {
+    return locale_shortWeekdays[d.getDay()];
+  }
+
+  function formatWeekday(d) {
+    return locale_weekdays[d.getDay()];
+  }
+
+  function formatShortMonth(d) {
+    return locale_shortMonths[d.getMonth()];
+  }
+
+  function formatMonth(d) {
+    return locale_months[d.getMonth()];
+  }
+
+  function formatPeriod(d) {
+    return locale_periods[+(d.getHours() >= 12)];
+  }
+
+  function formatQuarter(d) {
+    return 1 + ~~(d.getMonth() / 3);
+  }
+
+  function formatUTCShortWeekday(d) {
+    return locale_shortWeekdays[d.getUTCDay()];
+  }
+
+  function formatUTCWeekday(d) {
+    return locale_weekdays[d.getUTCDay()];
+  }
+
+  function formatUTCShortMonth(d) {
+    return locale_shortMonths[d.getUTCMonth()];
+  }
+
+  function formatUTCMonth(d) {
+    return locale_months[d.getUTCMonth()];
+  }
+
+  function formatUTCPeriod(d) {
+    return locale_periods[+(d.getUTCHours() >= 12)];
+  }
+
+  function formatUTCQuarter(d) {
+    return 1 + ~~(d.getUTCMonth() / 3);
+  }
+
+  return {
+    format: function(specifier) {
+      var f = newFormat(specifier += "", formats);
+      f.toString = function() { return specifier; };
+      return f;
+    },
+    parse: function(specifier) {
+      var p = newParse(specifier += "", false);
+      p.toString = function() { return specifier; };
+      return p;
+    },
+    utcFormat: function(specifier) {
+      var f = newFormat(specifier += "", utcFormats);
+      f.toString = function() { return specifier; };
+      return f;
+    },
+    utcParse: function(specifier) {
+      var p = newParse(specifier += "", true);
+      p.toString = function() { return specifier; };
+      return p;
+    }
+  };
+}
+
+var pads = {"-": "", "_": " ", "0": "0"},
+    numberRe = /^\s*\d+/, // note: ignores next directive
+    percentRe = /^%/,
+    requoteRe = /[\\^$*+?|[\]().{}]/g;
+
+function pad$1(value, fill, width) {
+  var sign = value < 0 ? "-" : "",
+      string = (sign ? -value : value) + "",
+      length = string.length;
+  return sign + (length < width ? new Array(width - length + 1).join(fill) + string : string);
+}
+
+function requote(s) {
+  return s.replace(requoteRe, "\\$&");
+}
+
+function formatRe(names) {
+  return new RegExp("^(?:" + names.map(requote).join("|") + ")", "i");
+}
+
+function formatLookup(names) {
+  var map = {}, i = -1, n = names.length;
+  while (++i < n) map[names[i].toLowerCase()] = i;
+  return map;
+}
+
+function parseWeekdayNumberSunday(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 1));
+  return n ? (d.w = +n[0], i + n[0].length) : -1;
+}
+
+function parseWeekdayNumberMonday(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 1));
+  return n ? (d.u = +n[0], i + n[0].length) : -1;
+}
+
+function parseWeekNumberSunday(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.U = +n[0], i + n[0].length) : -1;
+}
+
+function parseWeekNumberISO(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.V = +n[0], i + n[0].length) : -1;
+}
+
+function parseWeekNumberMonday(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.W = +n[0], i + n[0].length) : -1;
+}
+
+function parseFullYear(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 4));
+  return n ? (d.y = +n[0], i + n[0].length) : -1;
+}
+
+function parseYear(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.y = +n[0] + (+n[0] > 68 ? 1900 : 2000), i + n[0].length) : -1;
+}
+
+function parseZone(d, string, i) {
+  var n = /^(Z)|([+-]\d\d)(?::?(\d\d))?/.exec(string.slice(i, i + 6));
+  return n ? (d.Z = n[1] ? 0 : -(n[2] + (n[3] || "00")), i + n[0].length) : -1;
+}
+
+function parseQuarter(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 1));
+  return n ? (d.q = n[0] * 3 - 3, i + n[0].length) : -1;
+}
+
+function parseMonthNumber(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.m = n[0] - 1, i + n[0].length) : -1;
+}
+
+function parseDayOfMonth(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.d = +n[0], i + n[0].length) : -1;
+}
+
+function parseDayOfYear(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 3));
+  return n ? (d.m = 0, d.d = +n[0], i + n[0].length) : -1;
+}
+
+function parseHour24(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.H = +n[0], i + n[0].length) : -1;
+}
+
+function parseMinutes(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.M = +n[0], i + n[0].length) : -1;
+}
+
+function parseSeconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 2));
+  return n ? (d.S = +n[0], i + n[0].length) : -1;
+}
+
+function parseMilliseconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 3));
+  return n ? (d.L = +n[0], i + n[0].length) : -1;
+}
+
+function parseMicroseconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i, i + 6));
+  return n ? (d.L = Math.floor(n[0] / 1000), i + n[0].length) : -1;
+}
+
+function parseLiteralPercent(d, string, i) {
+  var n = percentRe.exec(string.slice(i, i + 1));
+  return n ? i + n[0].length : -1;
+}
+
+function parseUnixTimestamp(d, string, i) {
+  var n = numberRe.exec(string.slice(i));
+  return n ? (d.Q = +n[0], i + n[0].length) : -1;
+}
+
+function parseUnixTimestampSeconds(d, string, i) {
+  var n = numberRe.exec(string.slice(i));
+  return n ? (d.s = +n[0], i + n[0].length) : -1;
+}
+
+function formatDayOfMonth(d, p) {
+  return pad$1(d.getDate(), p, 2);
+}
+
+function formatHour24(d, p) {
+  return pad$1(d.getHours(), p, 2);
+}
+
+function formatHour12(d, p) {
+  return pad$1(d.getHours() % 12 || 12, p, 2);
+}
+
+function formatDayOfYear(d, p) {
+  return pad$1(1 + day.count(year(d), d), p, 3);
+}
+
+function formatMilliseconds(d, p) {
+  return pad$1(d.getMilliseconds(), p, 3);
+}
+
+function formatMicroseconds(d, p) {
+  return formatMilliseconds(d, p) + "000";
+}
+
+function formatMonthNumber(d, p) {
+  return pad$1(d.getMonth() + 1, p, 2);
+}
+
+function formatMinutes(d, p) {
+  return pad$1(d.getMinutes(), p, 2);
+}
+
+function formatSeconds(d, p) {
+  return pad$1(d.getSeconds(), p, 2);
+}
+
+function formatWeekdayNumberMonday(d) {
+  var day = d.getDay();
+  return day === 0 ? 7 : day;
+}
+
+function formatWeekNumberSunday(d, p) {
+  return pad$1(sunday.count(year(d) - 1, d), p, 2);
+}
+
+function formatWeekNumberISO(d, p) {
+  var day = d.getDay();
+  d = (day >= 4 || day === 0) ? thursday(d) : thursday.ceil(d);
+  return pad$1(thursday.count(year(d), d) + (year(d).getDay() === 4), p, 2);
+}
+
+function formatWeekdayNumberSunday(d) {
+  return d.getDay();
+}
+
+function formatWeekNumberMonday(d, p) {
+  return pad$1(monday.count(year(d) - 1, d), p, 2);
+}
+
+function formatYear$1(d, p) {
+  return pad$1(d.getFullYear() % 100, p, 2);
+}
+
+function formatFullYear(d, p) {
+  return pad$1(d.getFullYear() % 10000, p, 4);
+}
+
+function formatZone(d) {
+  var z = d.getTimezoneOffset();
+  return (z > 0 ? "-" : (z *= -1, "+"))
+      + pad$1(z / 60 | 0, "0", 2)
+      + pad$1(z % 60, "0", 2);
+}
+
+function formatUTCDayOfMonth(d, p) {
+  return pad$1(d.getUTCDate(), p, 2);
+}
+
+function formatUTCHour24(d, p) {
+  return pad$1(d.getUTCHours(), p, 2);
+}
+
+function formatUTCHour12(d, p) {
+  return pad$1(d.getUTCHours() % 12 || 12, p, 2);
+}
+
+function formatUTCDayOfYear(d, p) {
+  return pad$1(1 + utcDay.count(utcYear(d), d), p, 3);
+}
+
+function formatUTCMilliseconds(d, p) {
+  return pad$1(d.getUTCMilliseconds(), p, 3);
+}
+
+function formatUTCMicroseconds(d, p) {
+  return formatUTCMilliseconds(d, p) + "000";
+}
+
+function formatUTCMonthNumber(d, p) {
+  return pad$1(d.getUTCMonth() + 1, p, 2);
+}
+
+function formatUTCMinutes(d, p) {
+  return pad$1(d.getUTCMinutes(), p, 2);
+}
+
+function formatUTCSeconds(d, p) {
+  return pad$1(d.getUTCSeconds(), p, 2);
+}
+
+function formatUTCWeekdayNumberMonday(d) {
+  var dow = d.getUTCDay();
+  return dow === 0 ? 7 : dow;
+}
+
+function formatUTCWeekNumberSunday(d, p) {
+  return pad$1(utcSunday.count(utcYear(d) - 1, d), p, 2);
+}
+
+function formatUTCWeekNumberISO(d, p) {
+  var day = d.getUTCDay();
+  d = (day >= 4 || day === 0) ? utcThursday(d) : utcThursday.ceil(d);
+  return pad$1(utcThursday.count(utcYear(d), d) + (utcYear(d).getUTCDay() === 4), p, 2);
+}
+
+function formatUTCWeekdayNumberSunday(d) {
+  return d.getUTCDay();
+}
+
+function formatUTCWeekNumberMonday(d, p) {
+  return pad$1(utcMonday.count(utcYear(d) - 1, d), p, 2);
+}
+
+function formatUTCYear(d, p) {
+  return pad$1(d.getUTCFullYear() % 100, p, 2);
+}
+
+function formatUTCFullYear(d, p) {
+  return pad$1(d.getUTCFullYear() % 10000, p, 4);
+}
+
+function formatUTCZone() {
+  return "+0000";
+}
+
+function formatLiteralPercent() {
+  return "%";
+}
+
+function formatUnixTimestamp(d) {
+  return +d;
+}
+
+function formatUnixTimestampSeconds(d) {
+  return Math.floor(+d / 1000);
+}
+
+var locale$1;
+var timeFormat;
+var timeParse;
+var utcFormat;
+var utcParse;
+
+defaultLocale$1({
+  dateTime: "%x, %X",
+  date: "%-m/%-d/%Y",
+  time: "%-I:%M:%S %p",
+  periods: ["AM", "PM"],
+  days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  shortDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  shortMonths: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+});
+
+function defaultLocale$1(definition) {
+  locale$1 = formatLocale$1(definition);
+  timeFormat = locale$1.format;
+  timeParse = locale$1.parse;
+  utcFormat = locale$1.utcFormat;
+  utcParse = locale$1.utcParse;
+  return locale$1;
+}
+
 var d3Axis = createCommonjsModule(function (module, exports) {
 // https://d3js.org/d3-axis/ Version 1.0.0. Copyright 2016 Mike Bostock.
 (function (global, factory) {
@@ -3068,95 +3880,118 @@ function colors(specifier) {
 
 var schemeAccent = colors("7fc97fbeaed4fdc086ffff99386cb0f0027fbf5b17666666");
 
-function addComtradeData(HScode){
-	// use UN comtrade data to construct a chart showing each county's 
-	// share of total annual trade with Japan 
-	const years = [2019,2018,2017,2016,2015];
+// use UN comtrade data to construct an SVG chart showing each major trading 
+
+const YMparse = timeParse('%Y%m');
+const YMformat = timeFormat('%Y%m');
+
+async function addComtradeData( HScode, SVGselector ){
+
+	// access the chart
+	const svg = select(SVGselector);
+	const margin = {top: 5, right: 60, bottom: 40, left: 10};
+	const width = svg.attr('width');
+	const height = svg.attr('height');
+
+	// get data for ALL PERIODS for up to five major partners
+	// [ World, Canada, USA, China, Thailand ]
+	const majorPlayers = [0,124,842,156,764];
+	const allTimeCall = formatAPIcall2(HScode,majorPlayers);
+	const allTimeData = await json(allTimeCall);
+	
+	// find all available date and value ranges 
+	// ( to set up the scales and axes )
+	let periods = [ ... new Set( allTimeData.dataset.map( d => d.period ) ) ];
+	periods = periods
+		.map( period => YMparse( `${period}` ) )
+		.sort( (a,b) => a - b );
+	let maxTradeValue = Math.max( ... 
+		allTimeData.dataset
+			.filter( d => d.ptTitle == 'World' )
+			.map( d => d.TradeValue )
+	);
+	
+	// create the scales and axes
+	const Y = linear$1() // time axis
+		.domain( [ Math.min(...periods), Math.max(...periods) ] )
+		.range( [ height - margin.bottom, 0 + margin.top ] );
+		
+	const X = linear$1() //  trade value axis
+		.domain( [ 0, maxTradeValue ] )
+		.range( [ 0 + margin.left, width - margin.right ] );
+	svg.append('g')
+		.attr('transform',`translate(${width-margin.right},0)`)
+		.call(
+			d3Axis$1.axisRight(Y)
+				.tickFormat( timeFormat('%Y') )
+		);
+	svg.append('g')
+		.attr('transform',`translate(0,${height-margin.bottom})`)
+		.call( d3Axis$1.axisBottom(X).ticks(8,'$.2~s') );
+	
+	// now format the data and add the areas
+	let [ trade, partners ] = formatData( allTimeData.dataset, periods );
+	
+	console.log(trade);
+	console.log(partners);
+	
+	const colors = ordinal()
+		.domain([...partners])
+		.range(schemeAccent);
+	const areaGen = area()
+		.y( d => Y(d.data.period) )
+		.x0( d => X(d[0]) )
+		.x1( d => X(d[1]) )
+		.curve(curveNatural);
+	// apply the stack generator
+	let series = stack().keys([...partners])(trade);
+	svg.append('g')
+		.attr('id','dataSpace')
+		.selectAll('path')
+		.data(series)
+		.join('path')
+		.attr('fill', (d,i) => colors(i) )
+		.attr('d',areaGen)
+		.append('title').text(d=>d.key); // country name	
+	
+	return
+	
+}
+
+function formatAPIcall2( HScode, partners=['all'], periods=['all'] ){
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
-		'r':392,'rg':1,'p':'all', // imports reported by Japan from all regions
-		'freq':'A', 'ps':years.join(','), // annual data for the selected years
-		'px':'HS', 'cc':HScode  // search by HS code
+		'r': 392,    // reporter = japan 
+		'rg': 1,     // imports (to Japan)
+		'p': partners.join(','), // partner regions
+		'freq': 'M', // monthly 
+		'ps': periods.join(','), // data for all periods
+		'px': 'HS', 'cc':HScode  // search by HS code
 	});
-	json(`https://comtrade.un.org/api/get?${params}`).then( response => {
-		const data = response.dataset;
-		if ( data.length < 1 ) { 
-			return console.log('no comtrade data supplied') 
+	return `https://comtrade.un.org/api/get?${params}`
+}
+
+function formatData( dataset, periods ){
+	// the data needs to be formatted and organized for the stack generator
+	let partners = new Set( dataset.map(d=>d.ptTitle) );
+	partners.delete('World');
+	
+	const allTrade = periods.map( period => {
+		let periodData = dataset
+			.filter( d => `${d.period}` == YMformat(period) );
+		let worldTrade = periodData.find( d => d.ptTitle == 'World' ).TradeValue;
+		let partnerTrade = periodData
+			.filter( d => d.ptTitle != 'World' )
+			.reduce( (a,b) => a + b.TradeValue, 0 );
+		let trade = { 'period': period, 'Other': worldTrade - partnerTrade };
+		for ( let partner of partners ){
+			let record = periodData.find( d => d.ptTitle == partner );
+			trade[partner] = record ? record.TradeValue : 0;
 		}
-		// start slicing up the data	
-		const maxAnnualTrade = Math.max( ...
-			data
-				.filter( p => p.ptTitle=='World')
-				.map( p => p.TradeValue)
-		);
-		// find any trade partners constituting >=5% of total trade in a year
-		const topPartners = new Set(['Canada']);
-		const minShare = 0.05;
-		years.map( year => { 
-			let world = data.find(p => p.yr==year && p.ptTitle=='World');
-			data.filter(p => p.yr==year && p.ptTitle!='World').map( p => {
-				if( p.TradeValue >= minShare * world.TradeValue ){
-					topPartners.add(p.ptTitle);
-				}
-			});
-		} );
-		// the data needs to be formatted and organized for the stack generator
-		const annualTrade = years.map( year => {
-			let yearData = data.filter( d => d.yr==year );
-			let otherTrade = yearData
-				.filter( d => ! topPartners.has(d.ptTitle) && d.ptTitle != 'World' )
-				.reduce( (a,b) => a + b.TradeValue, 0 );
-			let trade = { 'year': year, 'Other': otherTrade };			
-			for ( let partner of topPartners ){
-				let record = yearData.find( d => d.ptTitle==partner );
-				trade[partner] = record ? record.TradeValue : 0;
-			}
-			return trade
-		} );
-		console.log(annualTrade);
-		topPartners.add('Other');
-		// construct the chart
-		const svg = select('svg#annualTrade');
-		const margin = {top: 5, right: 60, bottom: 40, left: 10};
-		const width = svg.attr('width');
-		const height = svg.attr('height');
-		const Y = linear$1() // time axis
-			.domain( [ Math.min(...years), Math.max(...years) ] )
-			.range( [ height - margin.bottom, 0 + margin.top ] );
-		const X = linear$1() //  trade value axis
-			.domain( [ 0, maxAnnualTrade ] )
-			.range( [ 0 + margin.left, width - margin.right ] );
-		const colors = ordinal()
-			.domain([...topPartners])
-			.range(schemeAccent);
-		const areaGen = area()
-			.y( d => Y(d.data.year) )
-			.x0( d => X(d[0]) )
-			.x1( d => X(d[1]) )
-			.curve(curveNatural);
-		// apply the stack generator
-		let series = stack()
-			.keys([...topPartners])
-			.order(stackOrderInsideOut)
-			(annualTrade);
-		svg.selectAll('path')
-			.data(series)
-			.join('path')
-			.attr('fill', (d,i) => colors(i) )
-			.attr('d',areaGen)
-			.append('title').text(d=>d.key); // country name	
-		// add the axes
-		svg.append('g')
-			.attr('transform',`translate(${width-margin.right},0)`)
-			.call(
-				d3Axis$1.axisRight(Y)
-					.tickValues( years )
-					.tickFormat( format('.4') )
-			);
-		svg.append('g')
-			.attr('transform',`translate(0,${height-margin.bottom})`)
-			.call( d3Axis$1.axisBottom(X).ticks(8,'$.2~s') );
-	});
+		return trade
+	} );
+	partners.add('Other');
+	return [ allTrade, partners ]
 }
 
 // formatting
@@ -3222,7 +4057,7 @@ function updatePage(data){
 	params.set('hs6',data.HScode);
 	window.history.replaceState({},'',`${location.pathname}?${params}`);
 //	var code = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
-	addComtradeData(data.HScode);
+	addComtradeData(data.HScode,'svg#annualTrade');
 	select('#infoBox').style('display','block');
 	select('h2#HS').text(data.HScode);
 	select('p#HSdescription').text(data.description);
