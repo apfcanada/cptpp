@@ -3875,7 +3875,7 @@ async function addComtradeData( HScode, SVGselector ){
 
 	// access the chart
 	const svg = select(SVGselector);
-	const margin = {top: 5, right: 5, bottom: 40, left: 40};
+	const margin = {top: 5, right: 5, bottom: 20, left: 40};
 	const width = svg.attr('width');
 	const height = svg.attr('height');
 
@@ -3897,19 +3897,18 @@ async function addComtradeData( HScode, SVGselector ){
 			.map( d => d.TradeValue )
 	);
 	
-	// create the scales and axes
+	// create the scales and axis functions
 	const X = linear$1() // time axis
 		.domain( [ Math.min(...periods), Math.max(...periods) ] )
 		.range( [ 0 + margin.left, width - margin.right ] );
+	const xAxis = d3Axis$1.axisBottom(X)
+		.ticks(5)
+		.tickFormat( timeFormat('%Y %b') );
+	
 	const Y = linear$1() //  trade value axis
 		.domain( [ 0, maxTradeValue ] )
 		.range( [ height - margin.bottom, 0 + margin.top ] );
-	svg.append('g')
-		.attr('transform',`translate(0,${height-margin.bottom})`)
-		.call( d3Axis$1.axisBottom(X).tickFormat( timeFormat('%Y %b') ) );
-	svg.append('g')
-		.attr('transform',`translate(${margin.left},0)`)
-		.call( d3Axis$1.axisLeft(Y).ticks(8,'$.2~s') );
+	const yAxis = d3Axis$1.axisLeft(Y).ticks(5,'$.2~s');
 	
 	// now format the data and add the areas
 	let [ trade, partners ] = formatData( allTimeData.dataset, periods );
@@ -3923,16 +3922,24 @@ async function addComtradeData( HScode, SVGselector ){
 		.y1( d => Y(d[1]) )
 		.curve(curveBasis);
 	// apply the stack generator
-	let series = stack().keys([...partners])(trade);
-	svg.append('g')
-		.attr('id','dataSpace')
+	let series = stack()
+		.keys([...partners])(trade);
+	svg.select('g#dataSpace')
 		.selectAll('path')
 		.data(series)
 		.join('path')
 		.attr('fill', (d,i) => colors(i) )
 		.attr('d',areaGen)
 		.append('title').text(d=>d.key); // country name	
-	
+
+	// apply the axes
+	svg.select('g#xAxis')
+		.attr('transform',`translate(0,${height-margin.bottom})`)
+		.call( xAxis );
+	svg.select('g#yAxis')
+		.attr('transform',`translate(${margin.left},0)`)
+		.call( yAxis );
+
 	return
 	
 }
