@@ -1416,11 +1416,22 @@ function area() {
 
 var slice = Array.prototype.slice;
 
-function Natural(context) {
+function point(that, x, y) {
+  that._context.bezierCurveTo(
+    (2 * that._x0 + that._x1) / 3,
+    (2 * that._y0 + that._y1) / 3,
+    (that._x0 + 2 * that._x1) / 3,
+    (that._y0 + 2 * that._y1) / 3,
+    (that._x0 + 4 * that._x1 + x) / 6,
+    (that._y0 + 4 * that._y1 + y) / 6
+  );
+}
+
+function Basis(context) {
   this._context = context;
 }
 
-Natural.prototype = {
+Basis.prototype = {
   areaStart: function() {
     this._line = 0;
   },
@@ -1428,58 +1439,33 @@ Natural.prototype = {
     this._line = NaN;
   },
   lineStart: function() {
-    this._x = [];
-    this._y = [];
+    this._x0 = this._x1 =
+    this._y0 = this._y1 = NaN;
+    this._point = 0;
   },
   lineEnd: function() {
-    var x = this._x,
-        y = this._y,
-        n = x.length;
-
-    if (n) {
-      this._line ? this._context.lineTo(x[0], y[0]) : this._context.moveTo(x[0], y[0]);
-      if (n === 2) {
-        this._context.lineTo(x[1], y[1]);
-      } else {
-        var px = controlPoints(x),
-            py = controlPoints(y);
-        for (var i0 = 0, i1 = 1; i1 < n; ++i0, ++i1) {
-          this._context.bezierCurveTo(px[0][i0], py[0][i0], px[1][i0], py[1][i0], x[i1], y[i1]);
-        }
-      }
+    switch (this._point) {
+      case 3: point(this, this._x1, this._y1); // proceed
+      case 2: this._context.lineTo(this._x1, this._y1); break;
     }
-
-    if (this._line || (this._line !== 0 && n === 1)) this._context.closePath();
+    if (this._line || (this._line !== 0 && this._point === 1)) this._context.closePath();
     this._line = 1 - this._line;
-    this._x = this._y = null;
   },
   point: function(x, y) {
-    this._x.push(+x);
-    this._y.push(+y);
+    x = +x, y = +y;
+    switch (this._point) {
+      case 0: this._point = 1; this._line ? this._context.lineTo(x, y) : this._context.moveTo(x, y); break;
+      case 1: this._point = 2; break;
+      case 2: this._point = 3; this._context.lineTo((5 * this._x0 + this._x1) / 6, (5 * this._y0 + this._y1) / 6); // proceed
+      default: point(this, x, y); break;
+    }
+    this._x0 = this._x1, this._x1 = x;
+    this._y0 = this._y1, this._y1 = y;
   }
 };
 
-// See https://www.particleincell.com/2012/bezier-splines/ for derivation.
-function controlPoints(x) {
-  var i,
-      n = x.length - 1,
-      m,
-      a = new Array(n),
-      b = new Array(n),
-      r = new Array(n);
-  a[0] = 0, b[0] = 2, r[0] = x[0] + 2 * x[1];
-  for (i = 1; i < n - 1; ++i) a[i] = 1, b[i] = 4, r[i] = 4 * x[i] + 2 * x[i + 1];
-  a[n - 1] = 2, b[n - 1] = 7, r[n - 1] = 8 * x[n - 1] + x[n];
-  for (i = 1; i < n; ++i) m = a[i] / b[i - 1], b[i] -= m, r[i] -= m * r[i - 1];
-  a[n - 1] = r[n - 1] / b[n - 1];
-  for (i = n - 2; i >= 0; --i) a[i] = (r[i] - a[i + 1]) / b[i];
-  b[n - 1] = (x[n] + a[n - 1]) / 2;
-  for (i = 0; i < n - 1; ++i) b[i] = 2 * x[i + 1] - a[i + 1];
-  return [a, b];
-}
-
-function curveNatural(context) {
-  return new Natural(context);
+function curveBasis(context) {
+  return new Basis(context);
 }
 
 function none$1(series, order) {
@@ -3889,7 +3875,7 @@ async function addComtradeData( HScode, SVGselector ){
 
 	// access the chart
 	const svg = select(SVGselector);
-	const margin = {top: 5, right: 60, bottom: 40, left: 10};
+	const margin = {top: 5, right: 5, bottom: 40, left: 40};
 	const width = svg.attr('width');
 	const height = svg.attr('height');
 
@@ -3912,37 +3898,30 @@ async function addComtradeData( HScode, SVGselector ){
 	);
 	
 	// create the scales and axes
-	const Y = linear$1() // time axis
+	const X = linear$1() // time axis
 		.domain( [ Math.min(...periods), Math.max(...periods) ] )
-		.range( [ height - margin.bottom, 0 + margin.top ] );
-		
-	const X = linear$1() //  trade value axis
-		.domain( [ 0, maxTradeValue ] )
 		.range( [ 0 + margin.left, width - margin.right ] );
-	svg.append('g')
-		.attr('transform',`translate(${width-margin.right},0)`)
-		.call(
-			d3Axis$1.axisRight(Y)
-				.tickFormat( timeFormat('%Y') )
-		);
+	const Y = linear$1() //  trade value axis
+		.domain( [ 0, maxTradeValue ] )
+		.range( [ height - margin.bottom, 0 + margin.top ] );
 	svg.append('g')
 		.attr('transform',`translate(0,${height-margin.bottom})`)
-		.call( d3Axis$1.axisBottom(X).ticks(8,'$.2~s') );
+		.call( d3Axis$1.axisBottom(X).tickFormat( timeFormat('%Y %b') ) );
+	svg.append('g')
+		.attr('transform',`translate(${margin.left},0)`)
+		.call( d3Axis$1.axisLeft(Y).ticks(8,'$.2~s') );
 	
 	// now format the data and add the areas
 	let [ trade, partners ] = formatData( allTimeData.dataset, periods );
-	
-	console.log(trade);
-	console.log(partners);
-	
+
 	const colors = ordinal()
 		.domain([...partners])
 		.range(schemeAccent);
 	const areaGen = area()
-		.y( d => Y(d.data.period) )
-		.x0( d => X(d[0]) )
-		.x1( d => X(d[1]) )
-		.curve(curveNatural);
+		.x( d => X(d.data.period) )
+		.y0( d => Y(d[0]) )
+		.y1( d => Y(d[1]) )
+		.curve(curveBasis);
 	// apply the stack generator
 	let series = stack().keys([...partners])(trade);
 	svg.append('g')

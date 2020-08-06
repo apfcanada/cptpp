@@ -3,9 +3,9 @@
 
 import { json } from 'd3-fetch'
 import { select } from 'd3-selection'
-import { stack, area, stackOrderInsideOut, curveNatural } from 'd3-shape'
+import { stack, area, stackOrderInsideOut, curveBasis } from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
-import { axisRight, axisBottom } from 'd3-axis'
+import { axisLeft, axisBottom } from 'd3-axis'
 import { schemeAccent } from 'd3-scale-chromatic'
 import { timeParse, timeFormat } from 'd3-time-format'
 
@@ -16,7 +16,7 @@ export async function addComtradeData( HScode, SVGselector ){
 
 	// access the chart
 	const svg = select(SVGselector)
-	const margin = {top: 5, right: 60, bottom: 40, left: 10}
+	const margin = {top: 5, right: 5, bottom: 40, left: 40}
 	const width = svg.attr('width')
 	const height = svg.attr('height')
 
@@ -39,37 +39,30 @@ export async function addComtradeData( HScode, SVGselector ){
 	)
 	
 	// create the scales and axes
-	const Y = scaleLinear() // time axis
+	const X = scaleLinear() // time axis
 		.domain( [ Math.min(...periods), Math.max(...periods) ] )
-		.range( [ height - margin.bottom, 0 + margin.top ] )
-		
-	const X = scaleLinear() //  trade value axis
-		.domain( [ 0, maxTradeValue ] )
 		.range( [ 0 + margin.left, width - margin.right ] )
-	svg.append('g')
-		.attr('transform',`translate(${width-margin.right},0)`)
-		.call(
-			axisRight(Y)
-				.tickFormat( timeFormat('%Y') )
-		)
+	const Y = scaleLinear() //  trade value axis
+		.domain( [ 0, maxTradeValue ] )
+		.range( [ height - margin.bottom, 0 + margin.top ] )
 	svg.append('g')
 		.attr('transform',`translate(0,${height-margin.bottom})`)
-		.call( axisBottom(X).ticks(8,'$.2~s') )
+		.call( axisBottom(X).tickFormat( timeFormat('%Y %b') ) )
+	svg.append('g')
+		.attr('transform',`translate(${margin.left},0)`)
+		.call( axisLeft(Y).ticks(8,'$.2~s') )
 	
 	// now format the data and add the areas
 	let [ trade, partners ] = formatData( allTimeData.dataset, periods )
-	
-	console.log(trade)
-	console.log(partners)
-	
+
 	const colors = scaleOrdinal()
 		.domain([...partners])
 		.range(schemeAccent)
 	const areaGen = area()
-		.y( d => Y(d.data.period) )
-		.x0( d => X(d[0]) )
-		.x1( d => X(d[1]) )
-		.curve(curveNatural)
+		.x( d => X(d.data.period) )
+		.y0( d => Y(d[0]) )
+		.y1( d => Y(d[1]) )
+		.curve(curveBasis)
 	// apply the stack generator
 	let series = stack().keys([...partners])(trade)
 	svg.append('g')
