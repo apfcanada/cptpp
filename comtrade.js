@@ -3,7 +3,11 @@
 
 import { json } from 'd3-fetch'
 import { select } from 'd3-selection'
-import { stack, area, stackOrderInsideOut, curveBasis } from 'd3-shape'
+import { 
+	stack, area,
+	stackOrderNone, stackOffsetNone,
+	curveBasis
+} from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { schemeAccent } from 'd3-scale-chromatic'
@@ -64,7 +68,10 @@ export async function addComtradeData( HScode, SVGselector ){
 		.curve(curveBasis)
 	// apply the stack generator
 	let series = stack()
-		.keys([...partners])(trade)
+		.keys([...partners])
+		.offset( stackOffsetNone )
+		.order( stackOrderNone )
+		(trade)
 	svg.select('g#dataSpace')
 		.selectAll('path')
 		.data(series)
