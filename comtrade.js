@@ -12,6 +12,7 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { schemeAccent } from 'd3-scale-chromatic'
 import { timeParse, timeFormat } from 'd3-time-format'
+import { timeYear, timeMonth } from 'd3-time'
 
 const YMparse = timeParse('%Y%m')
 const YMformat = timeFormat('%Y%m')
@@ -43,12 +44,16 @@ export async function addComtradeData( HScode, SVGselector ){
 	)
 	
 	// create the scales and axis functions
+	const dateRange = [
+		new Date( Math.min(...periods) ),
+		new Date( Math.max(...periods) ) ]
 	const X = scaleLinear() // time axis
-		.domain( [ Math.min(...periods), Math.max(...periods) ] )
+		.domain( dateRange )
 		.range( [ 0 + margin.left, width - margin.right ] )
+	const years = timeYear.range(...dateRange)
 	const xAxis = axisBottom(X)
-		.ticks(5)
-		.tickFormat( timeFormat('%Y %b') )
+		.tickValues( years )
+		.tickFormat( timeFormat('%Y') )
 	
 	const Y = scaleLinear() //  trade value axis
 		.domain( [ 0, maxTradeValue ] )

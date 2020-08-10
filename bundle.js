@@ -3877,12 +3877,16 @@
 		);
 		
 		// create the scales and axis functions
+		const dateRange = [
+			new Date( Math.min(...periods) ),
+			new Date( Math.max(...periods) ) ];
 		const X = linear$1() // time axis
-			.domain( [ Math.min(...periods), Math.max(...periods) ] )
+			.domain( dateRange )
 			.range( [ 0 + margin.left, width - margin.right ] );
+		const years = year.range(...dateRange);
 		const xAxis = axisBottom(X)
-			.ticks(5)
-			.tickFormat( timeFormat('%Y %b') );
+			.tickValues( years )
+			.tickFormat( timeFormat('%Y') );
 		
 		const Y = linear$1() //  trade value axis
 			.domain( [ 0, maxTradeValue ] )
