@@ -13,11 +13,20 @@ const TRF = new Intl.NumberFormat('en-CA',
 	{ style: 'percent', maximumFractionDigits: 2 } );
 	
 const regions = [
+	{abbr:'CA', name:'Canada',          color:'red'},
 	{abbr:'BC', name:'British Columbia',color:'#f58220'},
 	{abbr:'AB', name:'Alberta',         color:'#da1f46'},
 	{abbr:'SK', name:'Saskatchewan',    color:'#485865'},
 	{abbr:'MB', name:'Manitoba',        color:'#a7a9ac'},
-	{abbr:'ROC',name:'Rest of Canada',  color:'#111111'}
+	{abbr:'ROC',name:'Rest of Canada',  color:'#111111'},
+	//
+	{abbr:'JP', name:'Japan',           color:'#111111'},
+	{abbr:'ML', name:'Malaysia',        color:'#111111'},
+	{abbr:'MX', name:'Mexico',          color:'#111111'},
+	{abbr:'NZ', name:'New Zealand',     color:'#111111'},
+	{abbr:'CN', name:'China',           color:'#111111'},
+	{abbr:'EU', name:'European Union',  color:'#111111'},
+	{abbr:'US', name:'United States',   color:'#111111'}
 ]
 
 // create the search box, populated with data
@@ -77,13 +86,11 @@ function updatePage(data){
 	// display link if no estimated gains
 	select('#noEffect').style('display', data.CAgain==''?'block':'none')
 	// set additional region data specific to product category
-	regions.map( (reg,i,a) => {
-		reg['gain'] = Number(data[`${reg.abbr}gain`])
-		reg['change'] = Number(data[`${reg.abbr}gainPercent`]),
-		// add attributes used for the share mapping
-		reg['prevCumGain'] = i > 0 ? a[i-1].cumGain : 0,
-		reg['cumGain'] = reg.gain + reg.prevCumGain
+	regions.map( region => {
+		region['gain']   = Number(data[`${region.abbr}gain`])
+		region['change'] = Number(data[`${region.abbr}gainPercent`])
 	})
+	console.log(regions)
 	select('#expectedGains')
 		.style('display', data.CAgain == '' ? 'none' : null )
 		.select('table#regionalGains tbody')
@@ -94,8 +101,8 @@ function updatePage(data){
 		.selectAll('td')
 		.data(d => [ 
 			d.name,  
-			d.gain > 0 ? USD.format(d.gain) : 'None',
-			d.gain > 0 ? PCT.format(d.change): 'NA'
+			d.gain != 0 ? USD.format(d.gain) : 'None',
+			(d.change==0||isNaN(d.change)) ? '' : PCT.format(d.change)
 		] )
 		.join('td').text(t=>t)
 }
