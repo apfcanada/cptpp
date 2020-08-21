@@ -33,10 +33,13 @@ body {
 	
 #infoBox { /* overridden when there are results to show */
 	display: none; }
-	
-p#HSdescription {
-	font-style: italic;
-	font-size: 1.2em; }
+
+#selected { 
+	font-size: 1.3em; }
+#HScode { 
+	font-weight: bold; }
+#HSdescription {
+	font-style: italic; }
 
 #oldTariffRate,
 #newTariffRate{
