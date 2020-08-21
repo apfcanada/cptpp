@@ -4031,8 +4031,8 @@
 	//	var code = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
 		addComtradeData(data.HScode,'svg#annualTrade');
 		select('#infoBox').style('display','block');
-		select('h2#HS').text(data.HScode);
-		select('p#HSdescription').text(data.description);
+		select('#HScode').text(data.HScode);
+		select('#HSdescription').text(data.description);
 		// don't show tariffs if not available
 		select('#tariffs').style('display',data.tariffRate==''?'none':'block');
 		select('#oldTariffRate').text( TRF.format(data.initialTariffRate));
