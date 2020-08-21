@@ -4050,10 +4050,9 @@
 		select('#noEffect').style('display', data.CAgain==''?'block':'none');
 		// set additional region data specific to product category
 		regions.map( region => {
-			region['gain']   = Number(data[`${region.abbr}gain`]);
-			region['change'] = Number(data[`${region.abbr}gainPercent`]);
+			region.gain   = Number(data[`${region.abbr}gain`]);
+			region.change = Number(data[`${region.abbr}gainPercent`]);
 		});
-		console.log(regions);
 		select('#expectedGains')
 			.style('display', data.CAgain == '' ? 'none' : null )
 			.select('table#regionalGains tbody')
