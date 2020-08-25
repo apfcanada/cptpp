@@ -14,28 +14,43 @@ import { schemeAccent } from 'd3-scale-chromatic'
 import { timeParse, timeFormat } from 'd3-time-format'
 import { timeYear, timeMonth } from 'd3-time'
 
-const YMparse = timeParse('%Y%m')
-const YMformat = timeFormat('%Y%m')
+const period2date = timeParse('%Y')
+const date2period = timeFormat('%Y')
 
-export async function addComtradeData( HScode, SVGselector ){
+// Partner IDs for major trade partners + Canada
+// https://comtrade.un.org/Data/cache/partnerAreas.json
+const world = 0
+const canada = 124
+const topPartners = [
+	0,
+	156, // #1 China
+	842, // #2 USA
+	36,  // #3 Australia
+	124  // #4 S Korea
+]
 
-	// access the chart
-	const svg = select(SVGselector)
-	const margin = {top: 5, right: 5, bottom: 20, left: 40}
-	const width = svg.attr('width')
-	const height = svg.attr('height')
+const width = 600
+const height = 250
+const margin = {top: 5, right: 5, bottom: 20, left: 40}
 
-	// get data for ALL PERIODS for up to five major partners
-	// [ World, Canada, USA, China, Thailand ]
-	const majorPlayers = [0,124,842,156,764]
-	const allTimeCall = formatAPIcall2(HScode,majorPlayers)
+
+export async function addComtradeData( HScode ){
+	// delete the svg, in case this is an update and it already exists
+	let container = select('div#comtradeData')
+	container.select('svg').remove()
+	let loading = container.append('p').text('Loading...')
+	
+	const svg = setupSVG()
+	
+	// get data for all available times, for world + 4 top trade partners
+	const allTimeCall = formatAPIcall(HScode,topPartners,undefined)
 	const allTimeData = await json(allTimeCall)
 	
 	// find all available date and value ranges 
 	// ( to set up the scales and axes )
 	let periods = [ ... new Set( allTimeData.dataset.map( d => d.period ) ) ]
 	periods = periods
-		.map( period => YMparse( `${period}` ) )
+		.map( period => period2date( `${period}` ) )
 		.sort( (a,b) => a - b )
 	let maxTradeValue = Math.max( ... 
 		allTimeData.dataset
@@ -52,7 +67,7 @@ export async function addComtradeData( HScode, SVGselector ){
 		.range( [ 0 + margin.left, width - margin.right ] )
 	const years = timeYear.range(...dateRange)
 	const xAxis = axisBottom(X)
-		.tickValues( years )
+		//.tickValues( years )
 		.tickFormat( timeFormat('%Y') )
 	
 	const Y = scaleLinear() //  trade value axis
@@ -77,11 +92,15 @@ export async function addComtradeData( HScode, SVGselector ){
 		.offset( stackOffsetNone )
 		.order( stackOrderNone )
 		(trade)
+	// remove "loading..." just before drawing
+	loading.remove()
 	svg.select('g#dataSpace')
 		.selectAll('path')
 		.data(series)
 		.join('path')
 		.attr('fill', (d,i) => colors(i) )
+		.attr('stroke-width',0.5)
+		.attr('stroke','white')
 		.attr('d',areaGen)
 		.append('title').text(d=>d.key) // country name	
 
@@ -96,43 +115,25 @@ export async function addComtradeData( HScode, SVGselector ){
 	return
 	
 }
-	
-	// 2. data for ALL PARTNER COUNTRIES for recent time periods
-	//const call2 = formatAPIcall2(HScode,['all'],['recent'])
-	// 3. data for MAJOR RECENT PARTNERS at ALL TIMES
 
-
-
-//		// find any trade partners constituting >=5% of total trade in a year
-//		const topPartners = new Set(['Canada'])
-//		const minShare = 0.05
-//		years.map( year => { 
-//			let world = data.find(p => p.yr==year && p.ptTitle=='World')
-//			data.filter(p => p.yr==year && p.ptTitle!='World').map( p => {
-//				if( p.TradeValue >= minShare * world.TradeValue ){
-//					topPartners.add(p.ptTitle)
-//				}
-//			})
-//		} )
-
-
-function formatAPIcall(HScode,years){
-	// https://comtrade.un.org/Data/Doc/API
-	let params = new URLSearchParams({
-		'r':392,'rg':1,'p':'all', // imports reported by Japan from all regions
-		'freq':'A', 'ps':years.join(','), // annual data for the selected years
-		'px':'HS', 'cc':HScode  // search by HS code
-	})
-	return `https://comtrade.un.org/api/get?${params}`
+function setupSVG(){
+	let svg = select('div#comtradeData')
+		.append('svg')
+		.attr('width',width)
+		.attr('height',height)
+	svg.append('g').attr('id','dataSpace')
+	svg.append('g').attr('id','xAxis')
+	svg.append('g').attr('id','yAxis')
+	return svg
 }
 
-function formatAPIcall2( HScode, partners=['all'], periods=['all'] ){
+function formatAPIcall( HScode, partners=['all'], periods=['all'] ){
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
 		'r': 392,    // reporter = japan 
 		'rg': 1,     // imports (to Japan)
 		'p': partners.join(','), // partner regions
-		'freq': 'M', // monthly 
+		'freq': 'A', // monthly 
 		'ps': periods.join(','), // data for all periods
 		'px': 'HS', 'cc':HScode  // search by HS code
 	})
@@ -146,7 +147,7 @@ function formatData( dataset, periods ){
 	
 	const allTrade = periods.map( period => {
 		let periodData = dataset
-			.filter( d => `${d.period}` == YMformat(period) )
+			.filter( d => `${d.period}` == date2period(period) )
 		let worldTrade = periodData.find( d => d.ptTitle == 'World' ).TradeValue
 		let partnerTrade = periodData
 			.filter( d => d.ptTitle != 'World' )

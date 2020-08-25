@@ -3847,28 +3847,38 @@
 
 	// use UN comtrade data to construct an SVG chart showing each major trading 
 
-	const YMparse = timeParse('%Y%m');
-	const YMformat = timeFormat('%Y%m');
+	const period2date = timeParse('%Y');
+	const date2period = timeFormat('%Y');
+	const topPartners = [
+		0,
+		156, // #1 China
+		842, // #2 USA
+		36,  // #3 Australia
+		124  // #4 S Korea
+	];
 
-	async function addComtradeData( HScode, SVGselector ){
+	const width = 600;
+	const height = 250;
+	const margin = {top: 5, right: 5, bottom: 20, left: 40};
 
-		// access the chart
-		const svg = select(SVGselector);
-		const margin = {top: 5, right: 5, bottom: 20, left: 40};
-		const width = svg.attr('width');
-		const height = svg.attr('height');
 
-		// get data for ALL PERIODS for up to five major partners
-		// [ World, Canada, USA, China, Thailand ]
-		const majorPlayers = [0,124,842,156,764];
-		const allTimeCall = formatAPIcall2(HScode,majorPlayers);
+	async function addComtradeData( HScode ){
+		// delete the svg, in case this is an update and it already exists
+		let container = select('div#comtradeData');
+		container.select('svg').remove();
+		let loading = container.append('p').text('Loading...');
+		
+		const svg = setupSVG();
+		
+		// get data for all available times, for world + 4 top trade partners
+		const allTimeCall = formatAPIcall(HScode,topPartners,undefined);
 		const allTimeData = await json(allTimeCall);
 		
 		// find all available date and value ranges 
 		// ( to set up the scales and axes )
 		let periods = [ ... new Set( allTimeData.dataset.map( d => d.period ) ) ];
 		periods = periods
-			.map( period => YMparse( `${period}` ) )
+			.map( period => period2date( `${period}` ) )
 			.sort( (a,b) => a - b );
 		let maxTradeValue = Math.max( ... 
 			allTimeData.dataset
@@ -3885,7 +3895,7 @@
 			.range( [ 0 + margin.left, width - margin.right ] );
 		const years = year.range(...dateRange);
 		const xAxis = axisBottom(X)
-			.tickValues( years )
+			//.tickValues( years )
 			.tickFormat( timeFormat('%Y') );
 		
 		const Y = linear$1() //  trade value axis
@@ -3910,11 +3920,15 @@
 			.offset( stackOffsetNone )
 			.order( stackOrderNone )
 			(trade);
+		// remove "loading..." just before drawing
+		loading.remove();
 		svg.select('g#dataSpace')
 			.selectAll('path')
 			.data(series)
 			.join('path')
 			.attr('fill', (d,i) => colors(i) )
+			.attr('stroke-width',0.5)
+			.attr('stroke','white')
 			.attr('d',areaGen)
 			.append('title').text(d=>d.key); // country name	
 
@@ -3930,13 +3944,24 @@
 		
 	}
 
-	function formatAPIcall2( HScode, partners=['all'], periods=['all'] ){
+	function setupSVG(){
+		let svg = select('div#comtradeData')
+			.append('svg')
+			.attr('width',width)
+			.attr('height',height);
+		svg.append('g').attr('id','dataSpace');
+		svg.append('g').attr('id','xAxis');
+		svg.append('g').attr('id','yAxis');
+		return svg
+	}
+
+	function formatAPIcall( HScode, partners=['all'], periods=['all'] ){
 		// https://comtrade.un.org/Data/Doc/API
 		let params = new URLSearchParams({
 			'r': 392,    // reporter = japan 
 			'rg': 1,     // imports (to Japan)
 			'p': partners.join(','), // partner regions
-			'freq': 'M', // monthly 
+			'freq': 'A', // monthly 
 			'ps': periods.join(','), // data for all periods
 			'px': 'HS', 'cc':HScode  // search by HS code
 		});
@@ -3950,7 +3975,7 @@
 		
 		const allTrade = periods.map( period => {
 			let periodData = dataset
-				.filter( d => `${d.period}` == YMformat(period) );
+				.filter( d => `${d.period}` == date2period(period) );
 			let worldTrade = periodData.find( d => d.ptTitle == 'World' ).TradeValue;
 			let partnerTrade = periodData
 				.filter( d => d.ptTitle != 'World' )
@@ -4029,7 +4054,7 @@
 		params.set('hs6',data.HScode);
 		window.history.replaceState({},'',`${location.pathname}?${params}`);
 	//	var code = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
-		addComtradeData(data.HScode,'svg#annualTrade');
+		addComtradeData(data.HScode);
 		select('#infoBox').style('display','block');
 		select('#HScode').text(data.HScode);
 		select('#HSdescription').text(data.description);
