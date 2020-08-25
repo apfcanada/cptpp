@@ -66,9 +66,9 @@ function updatePage(data){
 	params.set('hs6',data.HScode)
 	window.history.replaceState({},'',`${location.pathname}?${params}`)
 //	var code = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
-	addComtradeData(data.HScode)
+	addComtradeData( `${data.HScode}` )
 	select('#infoBox').style('display','block')
-	select('#HScode').text(data.HScode)
+	select('#HScode').text(`${data.HScode}`)
 	select('#HSdescription').text(data.description)
 	// don't show tariffs if not available
 	select('#tariffs').style('display',data.tariffRate==''?'none':'block')

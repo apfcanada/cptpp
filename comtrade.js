@@ -17,47 +17,34 @@ import { timeYear, timeMonth } from 'd3-time'
 const period2date = timeParse('%Y')
 const date2period = timeFormat('%Y')
 
-// Partner IDs for major trade partners + Canada
-// https://comtrade.un.org/Data/cache/partnerAreas.json
-const world = 0
-const canada = 124
-const topPartners = [
-	0,
-	156, // #1 China
-	842, // #2 USA
-	36,  // #3 Australia
-	124  // #4 S Korea
-]
-
 const width = 600
 const height = 250
 const margin = {top: 5, right: 5, bottom: 20, left: 40}
 
+// Partner IDs for likely major trade partners
+// https://comtrade.un.org/Data/cache/partnerAreas.json
+const world = 0
+const canada = 124
+const china = 156
+const usa = 842
+// stores the partners for which we have already pulled a complete trade history
+const haveDataFor = new Set()
 
 export async function addComtradeData( HScode ){
-	// delete the svg, in case this is an update and it already exists
+
+	// add loading text and remove any existing SVG
 	let container = select('div#comtradeData')
 	container.select('svg').remove()
 	let loading = container.append('p').text('Loading...')
 	
-	const svg = setupSVG()
-	
 	// get data for all available times, for world + 4 top trade partners
-	const allTimeCall = formatAPIcall(HScode,topPartners,undefined)
-	const allTimeData = await json(allTimeCall)
+	let tradePartners = [ world, canada, china, usa ]
+	const data = await getAllDataFor( HScode, tradePartners )
 	
-	// find all available date and value ranges 
-	// ( to set up the scales and axes )
-	let periods = [ ... new Set( allTimeData.dataset.map( d => d.period ) ) ]
-	periods = periods
+	// find a list of available dates 
+	let periods = [ ... new Set( data.map( d => d.period ) ) ]
 		.map( period => period2date( `${period}` ) )
-		.sort( (a,b) => a - b )
-	let maxTradeValue = Math.max( ... 
-		allTimeData.dataset
-			.filter( d => d.ptTitle == 'World' )
-			.map( d => d.TradeValue )
-	)
-	
+		.sort( (a,b) => a - b )	
 	// create the scales and axis functions
 	const dateRange = [
 		new Date( Math.min(...periods) ),
@@ -65,18 +52,20 @@ export async function addComtradeData( HScode ){
 	const X = scaleLinear() // time axis
 		.domain( dateRange )
 		.range( [ 0 + margin.left, width - margin.right ] )
-	const years = timeYear.range(...dateRange)
 	const xAxis = axisBottom(X)
-		//.tickValues( years )
 		.tickFormat( timeFormat('%Y') )
-	
+	let maxTradeValue = Math.max( ... 
+		data
+			.filter( d => d.ptCode == world )
+			.map( d => d.TradeValue )
+	)
 	const Y = scaleLinear() //  trade value axis
 		.domain( [ 0, maxTradeValue ] )
 		.range( [ height - margin.bottom, 0 + margin.top ] )
 	const yAxis = axisLeft(Y).ticks(5,'$.2~s')
 	
 	// now format the data and add the areas
-	let [ trade, partners ] = formatData( allTimeData.dataset, periods )
+	let [ trade, partners ] = formatData( data, periods )
 
 	const colors = scaleOrdinal()
 		.domain([...partners])
@@ -94,6 +83,7 @@ export async function addComtradeData( HScode ){
 		(trade)
 	// remove "loading..." just before drawing
 	loading.remove()
+	const svg = setupSVG()
 	svg.select('g#dataSpace')
 		.selectAll('path')
 		.data(series)
@@ -127,15 +117,23 @@ function setupSVG(){
 	return svg
 }
 
-function formatAPIcall( HScode, partners=['all'], periods=['all'] ){
+async function getAllDataFor( HScode, partners ){
+	let response = await json(
+		formatAPIcall( HScode, partners, undefined )
+	)
+	partners.map( partnerCode => haveDataFor.add( partnerCode ) )
+	return response.dataset
+}
+
+function formatAPIcall( HScode, partners=['all'], periods='all' ){
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
-		'r': 392,    // reporter = japan 
-		'rg': 1,     // imports (to Japan)
+		'r': 392,       // reporter = japan 
+		'rg': 1,        // imports (to Japan)
 		'p': partners.join(','), // partner regions
-		'freq': 'A', // monthly 
-		'ps': periods.join(','), // data for all periods
-		'px': 'HS', 'cc':HScode  // search by HS code
+		'freq': 'A',    // monthly 
+		'ps': periods,  // data for all periods
+		'px': 'HS', 'cc': HScode  // search by HS code
 	})
 	return `https://comtrade.un.org/api/get?${params}`
 }
@@ -148,7 +146,7 @@ function formatData( dataset, periods ){
 	const allTrade = periods.map( period => {
 		let periodData = dataset
 			.filter( d => `${d.period}` == date2period(period) )
-		let worldTrade = periodData.find( d => d.ptTitle == 'World' ).TradeValue
+		let worldTrade = periodData.find( d => d.ptCode == world ).TradeValue
 		let partnerTrade = periodData
 			.filter( d => d.ptTitle != 'World' )
 			.reduce( (a,b) => a + b.TradeValue, 0 )
