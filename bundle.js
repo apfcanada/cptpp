@@ -3,6 +3,8 @@
 	factory();
 }((function () { 'use strict';
 
+	var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
 	function unwrapExports (x) {
 		return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
 	}
@@ -1576,6 +1578,256 @@
 
 	var ascendingBisect = bisector(ascending$1);
 	var bisectRight = ascendingBisect.right;
+	var bisectLeft = ascendingBisect.left;
+
+	function count(values, valueof) {
+	  let count = 0;
+	  if (valueof === undefined) {
+	    for (let value of values) {
+	      if (value != null && (value = +value) >= value) {
+	        ++count;
+	      }
+	    }
+	  } else {
+	    let index = -1;
+	    for (let value of values) {
+	      if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) {
+	        ++count;
+	      }
+	    }
+	  }
+	  return count;
+	}
+
+	function length(array) {
+	  return array.length | 0;
+	}
+
+	function empty$1(length) {
+	  return !(length > 0);
+	}
+
+	function arrayify(values) {
+	  return typeof values !== "object" || "length" in values ? values : Array.from(values);
+	}
+
+	function reducer(reduce) {
+	  return values => reduce(...values);
+	}
+
+	function cross(...values) {
+	  const reduce = typeof values[values.length - 1] === "function" && reducer(values.pop());
+	  values = values.map(arrayify);
+	  const lengths = values.map(length);
+	  const j = values.length - 1;
+	  const index = new Array(j + 1).fill(0);
+	  const product = [];
+	  if (j < 0 || lengths.some(empty$1)) return product;
+	  while (true) {
+	    product.push(index.map((j, i) => values[i][j]));
+	    let i = j;
+	    while (++index[i] === lengths[i]) {
+	      if (i === 0) return reduce ? product.map(reduce) : product;
+	      index[i--] = 0;
+	    }
+	  }
+	}
+
+	function cumsum(values, valueof) {
+	  var sum = 0, index = 0;
+	  return Float64Array.from(values, valueof === undefined
+	    ? v => (sum += +v || 0)
+	    : v => (sum += +valueof(v, index++, values) || 0));
+	}
+
+	function descending(a, b) {
+	  return b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
+	}
+
+	function variance(values, valueof) {
+	  let count = 0;
+	  let delta;
+	  let mean = 0;
+	  let sum = 0;
+	  if (valueof === undefined) {
+	    for (let value of values) {
+	      if (value != null && (value = +value) >= value) {
+	        delta = value - mean;
+	        mean += delta / ++count;
+	        sum += delta * (value - mean);
+	      }
+	    }
+	  } else {
+	    let index = -1;
+	    for (let value of values) {
+	      if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) {
+	        delta = value - mean;
+	        mean += delta / ++count;
+	        sum += delta * (value - mean);
+	      }
+	    }
+	  }
+	  if (count > 1) return sum / (count - 1);
+	}
+
+	function deviation(values, valueof) {
+	  const v = variance(values, valueof);
+	  return v ? Math.sqrt(v) : v;
+	}
+
+	function extent(values, valueof) {
+	  let min;
+	  let max;
+	  if (valueof === undefined) {
+	    for (const value of values) {
+	      if (value != null) {
+	        if (min === undefined) {
+	          if (value >= value) min = max = value;
+	        } else {
+	          if (min > value) min = value;
+	          if (max < value) max = value;
+	        }
+	      }
+	    }
+	  } else {
+	    let index = -1;
+	    for (let value of values) {
+	      if ((value = valueof(value, ++index, values)) != null) {
+	        if (min === undefined) {
+	          if (value >= value) min = max = value;
+	        } else {
+	          if (min > value) min = value;
+	          if (max < value) max = value;
+	        }
+	      }
+	    }
+	  }
+	  return [min, max];
+	}
+
+	// https://github.com/python/cpython/blob/a74eea238f5baba15797e2e8b570d153bc8690a7/Modules/mathmodule.c#L1423
+	class Adder {
+	  constructor() {
+	    this._partials = new Float64Array(32).fill(0);
+	    this._n = 0;
+	  }
+	  add(x) {
+	    const p = this._partials;
+	    let i = 0;
+	    for (let j = 0; j < this._n && j < 32; j++) {
+	      const y = p[j],
+	        hi = x + y,
+	        lo = Math.abs(x) < Math.abs(y) ? x - (hi - y) : y - (hi - x);
+	      if (lo) p[i++] = lo;
+	      x = hi;
+	    }
+	    p[i] = x;
+	    this._n = i + 1;
+	    return this;
+	  }
+	  valueOf() {
+	    const p = this._partials;
+	    let n = this._n, x, y, lo, hi = 0;
+	    if (n > 0) {
+	      hi = p[--n];
+	      while (n > 0) {
+	        x = hi;
+	        y = p[--n];
+	        hi = x + y;
+	        lo = y - (hi - x);
+	        if (lo) break;
+	      }
+	      if (n > 0 && ((lo < 0 && p[n - 1] < 0) || (lo > 0 && p[n - 1] > 0))) {
+	        y = lo * 2;
+	        x = hi + y;
+	        if (y == x - hi) hi = x;
+	      }
+	    }
+	    return hi;
+	  }
+	}
+
+	function fsum(values, valueof) {
+	  const adder = new Adder();
+	  if (valueof === undefined) {
+	    for (let value of values) {
+	      if (value = +value) {
+	        adder.add(value);
+	      }
+	    }
+	  } else {
+	    let index = -1;
+	    for (let value of values) {
+	      if (value = +valueof(value, ++index, values)) {
+	        adder.add(value);
+	      }
+	    }
+	  }
+	  return +adder;
+	}
+
+	function identity(x) {
+	  return x;
+	}
+
+	function group(values, ...keys) {
+	  return nest(values, identity, identity, keys);
+	}
+
+	function groups(values, ...keys) {
+	  return nest(values, Array.from, identity, keys);
+	}
+
+	function rollup(values, reduce, ...keys) {
+	  return nest(values, identity, reduce, keys);
+	}
+
+	function rollups(values, reduce, ...keys) {
+	  return nest(values, Array.from, reduce, keys);
+	}
+
+	function nest(values, map, reduce, keys) {
+	  return (function regroup(values, i) {
+	    if (i >= keys.length) return reduce(values);
+	    const groups = new Map();
+	    const keyof = keys[i++];
+	    let index = -1;
+	    for (const value of values) {
+	      const key = keyof(value, ++index, values);
+	      const group = groups.get(key);
+	      if (group) group.push(value);
+	      else groups.set(key, [value]);
+	    }
+	    for (const [key, values] of groups) {
+	      groups.set(key, regroup(values, i));
+	    }
+	    return map(groups);
+	  })(values, 0);
+	}
+
+	var array = Array.prototype;
+
+	var slice$1 = array.slice;
+
+	function constant$2(x) {
+	  return function() {
+	    return x;
+	  };
+	}
+
+	function sequence(start, stop, step) {
+	  start = +start, stop = +stop, step = (n = arguments.length) < 2 ? (stop = start, start = 0, 1) : n < 3 ? 1 : +step;
+
+	  var i = -1,
+	      n = Math.max(0, Math.ceil((stop - start) / step)) | 0,
+	      range = new Array(n);
+
+	  while (++i < n) {
+	    range[i] = start + i * step;
+	  }
+
+	  return range;
+	}
 
 	var e10 = Math.sqrt(50),
 	    e5 = Math.sqrt(10),
@@ -1630,11 +1882,540 @@
 	  return stop < start ? -step1 : step1;
 	}
 
+	function sturges(values) {
+	  return Math.ceil(Math.log(count(values)) / Math.LN2) + 1;
+	}
+
+	function bin() {
+	  var value = identity,
+	      domain = extent,
+	      threshold = sturges;
+
+	  function histogram(data) {
+	    if (!Array.isArray(data)) data = Array.from(data);
+
+	    var i,
+	        n = data.length,
+	        x,
+	        values = new Array(n);
+
+	    for (i = 0; i < n; ++i) {
+	      values[i] = value(data[i], i, data);
+	    }
+
+	    var xz = domain(values),
+	        x0 = xz[0],
+	        x1 = xz[1],
+	        tz = threshold(values, x0, x1);
+
+	    // Convert number of thresholds into uniform thresholds.
+	    if (!Array.isArray(tz)) {
+	      tz = tickStep(x0, x1, tz);
+	      tz = sequence(Math.ceil(x0 / tz) * tz, x1, tz); // exclusive
+	    }
+
+	    // Remove any thresholds outside the domain.
+	    var m = tz.length;
+	    while (tz[0] <= x0) tz.shift(), --m;
+	    while (tz[m - 1] > x1) tz.pop(), --m;
+
+	    var bins = new Array(m + 1),
+	        bin;
+
+	    // Initialize bins.
+	    for (i = 0; i <= m; ++i) {
+	      bin = bins[i] = [];
+	      bin.x0 = i > 0 ? tz[i - 1] : x0;
+	      bin.x1 = i < m ? tz[i] : x1;
+	    }
+
+	    // Assign data to bins by value, ignoring any outside the domain.
+	    for (i = 0; i < n; ++i) {
+	      x = values[i];
+	      if (x0 <= x && x <= x1) {
+	        bins[bisectRight(tz, x, 0, m)].push(data[i]);
+	      }
+	    }
+
+	    return bins;
+	  }
+
+	  histogram.value = function(_) {
+	    return arguments.length ? (value = typeof _ === "function" ? _ : constant$2(_), histogram) : value;
+	  };
+
+	  histogram.domain = function(_) {
+	    return arguments.length ? (domain = typeof _ === "function" ? _ : constant$2([_[0], _[1]]), histogram) : domain;
+	  };
+
+	  histogram.thresholds = function(_) {
+	    return arguments.length ? (threshold = typeof _ === "function" ? _ : Array.isArray(_) ? constant$2(slice$1.call(_)) : constant$2(_), histogram) : threshold;
+	  };
+
+	  return histogram;
+	}
+
+	function max(values, valueof) {
+	  let max;
+	  if (valueof === undefined) {
+	    for (const value of values) {
+	      if (value != null
+	          && (max < value || (max === undefined && value >= value))) {
+	        max = value;
+	      }
+	    }
+	  } else {
+	    let index = -1;
+	    for (let value of values) {
+	      if ((value = valueof(value, ++index, values)) != null
+	          && (max < value || (max === undefined && value >= value))) {
+	        max = value;
+	      }
+	    }
+	  }
+	  return max;
+	}
+
+	function min(values, valueof) {
+	  let min;
+	  if (valueof === undefined) {
+	    for (const value of values) {
+	      if (value != null
+	          && (min > value || (min === undefined && value >= value))) {
+	        min = value;
+	      }
+	    }
+	  } else {
+	    let index = -1;
+	    for (let value of values) {
+	      if ((value = valueof(value, ++index, values)) != null
+	          && (min > value || (min === undefined && value >= value))) {
+	        min = value;
+	      }
+	    }
+	  }
+	  return min;
+	}
+
+	// Based on https://github.com/mourner/quickselect
+	// ISC license, Copyright 2018 Vladimir Agafonkin.
+	function quickselect(array, k, left = 0, right = array.length - 1, compare = ascending$1) {
+	  while (right > left) {
+	    if (right - left > 600) {
+	      const n = right - left + 1;
+	      const m = k - left + 1;
+	      const z = Math.log(n);
+	      const s = 0.5 * Math.exp(2 * z / 3);
+	      const sd = 0.5 * Math.sqrt(z * s * (n - s) / n) * (m - n / 2 < 0 ? -1 : 1);
+	      const newLeft = Math.max(left, Math.floor(k - m * s / n + sd));
+	      const newRight = Math.min(right, Math.floor(k + (n - m) * s / n + sd));
+	      quickselect(array, k, newLeft, newRight, compare);
+	    }
+
+	    const t = array[k];
+	    let i = left;
+	    let j = right;
+
+	    swap(array, left, k);
+	    if (compare(array[right], t) > 0) swap(array, left, right);
+
+	    while (i < j) {
+	      swap(array, i, j), ++i, --j;
+	      while (compare(array[i], t) < 0) ++i;
+	      while (compare(array[j], t) > 0) --j;
+	    }
+
+	    if (compare(array[left], t) === 0) swap(array, left, j);
+	    else ++j, swap(array, j, right);
+
+	    if (j <= k) left = j + 1;
+	    if (k <= j) right = j - 1;
+	  }
+	  return array;
+	}
+
+	function swap(array, i, j) {
+	  const t = array[i];
+	  array[i] = array[j];
+	  array[j] = t;
+	}
+
+	function number(x) {
+	  return x === null ? NaN : +x;
+	}
+
+	function* numbers(values, valueof) {
+	  if (valueof === undefined) {
+	    for (let value of values) {
+	      if (value != null && (value = +value) >= value) {
+	        yield value;
+	      }
+	    }
+	  } else {
+	    let index = -1;
+	    for (let value of values) {
+	      if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) {
+	        yield value;
+	      }
+	    }
+	  }
+	}
+
+	function quantile(values, p, valueof) {
+	  values = Float64Array.from(numbers(values, valueof));
+	  if (!(n = values.length)) return;
+	  if ((p = +p) <= 0 || n < 2) return min(values);
+	  if (p >= 1) return max(values);
+	  var n,
+	      i = (n - 1) * p,
+	      i0 = Math.floor(i),
+	      value0 = max(quickselect(values, i0).subarray(0, i0 + 1)),
+	      value1 = min(values.subarray(i0 + 1));
+	  return value0 + (value1 - value0) * (i - i0);
+	}
+
+	function quantileSorted(values, p, valueof = number) {
+	  if (!(n = values.length)) return;
+	  if ((p = +p) <= 0 || n < 2) return +valueof(values[0], 0, values);
+	  if (p >= 1) return +valueof(values[n - 1], n - 1, values);
+	  var n,
+	      i = (n - 1) * p,
+	      i0 = Math.floor(i),
+	      value0 = +valueof(values[i0], i0, values),
+	      value1 = +valueof(values[i0 + 1], i0 + 1, values);
+	  return value0 + (value1 - value0) * (i - i0);
+	}
+
+	function freedmanDiaconis(values, min, max) {
+	  return Math.ceil((max - min) / (2 * (quantile(values, 0.75) - quantile(values, 0.25)) * Math.pow(count(values), -1 / 3)));
+	}
+
+	function scott(values, min, max) {
+	  return Math.ceil((max - min) / (3.5 * deviation(values) * Math.pow(count(values), -1 / 3)));
+	}
+
+	function maxIndex(values, valueof) {
+	  let max;
+	  let maxIndex = -1;
+	  let index = -1;
+	  if (valueof === undefined) {
+	    for (const value of values) {
+	      ++index;
+	      if (value != null
+	          && (max < value || (max === undefined && value >= value))) {
+	        max = value, maxIndex = index;
+	      }
+	    }
+	  } else {
+	    for (let value of values) {
+	      if ((value = valueof(value, ++index, values)) != null
+	          && (max < value || (max === undefined && value >= value))) {
+	        max = value, maxIndex = index;
+	      }
+	    }
+	  }
+	  return maxIndex;
+	}
+
+	function mean(values, valueof) {
+	  let count = 0;
+	  let sum = 0;
+	  if (valueof === undefined) {
+	    for (let value of values) {
+	      if (value != null && (value = +value) >= value) {
+	        ++count, sum += value;
+	      }
+	    }
+	  } else {
+	    let index = -1;
+	    for (let value of values) {
+	      if ((value = valueof(value, ++index, values)) != null && (value = +value) >= value) {
+	        ++count, sum += value;
+	      }
+	    }
+	  }
+	  if (count) return sum / count;
+	}
+
+	function median(values, valueof) {
+	  return quantile(values, 0.5, valueof);
+	}
+
+	function* flatten(arrays) {
+	  for (const array of arrays) {
+	    yield* array;
+	  }
+	}
+
+	function merge(arrays) {
+	  return Array.from(flatten(arrays));
+	}
+
+	function minIndex(values, valueof) {
+	  let min;
+	  let minIndex = -1;
+	  let index = -1;
+	  if (valueof === undefined) {
+	    for (const value of values) {
+	      ++index;
+	      if (value != null
+	          && (min > value || (min === undefined && value >= value))) {
+	        min = value, minIndex = index;
+	      }
+	    }
+	  } else {
+	    for (let value of values) {
+	      if ((value = valueof(value, ++index, values)) != null
+	          && (min > value || (min === undefined && value >= value))) {
+	        min = value, minIndex = index;
+	      }
+	    }
+	  }
+	  return minIndex;
+	}
+
+	function pairs(values, pairof = pair) {
+	  const pairs = [];
+	  let previous;
+	  let first = false;
+	  for (const value of values) {
+	    if (first) pairs.push(pairof(previous, value));
+	    previous = value;
+	    first = true;
+	  }
+	  return pairs;
+	}
+
+	function pair(a, b) {
+	  return [a, b];
+	}
+
+	function permute(source, keys) {
+	  return Array.from(keys, key => source[key]);
+	}
+
+	function least(values, compare = ascending$1) {
+	  let min;
+	  let defined = false;
+	  if (compare.length === 1) {
+	    let minValue;
+	    for (const element of values) {
+	      const value = compare(element);
+	      if (defined
+	          ? ascending$1(value, minValue) < 0
+	          : ascending$1(value, value) === 0) {
+	        min = element;
+	        minValue = value;
+	        defined = true;
+	      }
+	    }
+	  } else {
+	    for (const value of values) {
+	      if (defined
+	          ? compare(value, min) < 0
+	          : compare(value, value) === 0) {
+	        min = value;
+	        defined = true;
+	      }
+	    }
+	  }
+	  return min;
+	}
+
+	function leastIndex(values, compare = ascending$1) {
+	  if (compare.length === 1) return minIndex(values, compare);
+	  let minValue;
+	  let min = -1;
+	  let index = -1;
+	  for (const value of values) {
+	    ++index;
+	    if (min < 0
+	        ? compare(value, value) === 0
+	        : compare(value, minValue) < 0) {
+	      minValue = value;
+	      min = index;
+	    }
+	  }
+	  return min;
+	}
+
+	function greatest(values, compare = ascending$1) {
+	  let max;
+	  let defined = false;
+	  if (compare.length === 1) {
+	    let maxValue;
+	    for (const element of values) {
+	      const value = compare(element);
+	      if (defined
+	          ? ascending$1(value, maxValue) > 0
+	          : ascending$1(value, value) === 0) {
+	        max = element;
+	        maxValue = value;
+	        defined = true;
+	      }
+	    }
+	  } else {
+	    for (const value of values) {
+	      if (defined
+	          ? compare(value, max) > 0
+	          : compare(value, value) === 0) {
+	        max = value;
+	        defined = true;
+	      }
+	    }
+	  }
+	  return max;
+	}
+
+	function greatestIndex(values, compare = ascending$1) {
+	  if (compare.length === 1) return maxIndex(values, compare);
+	  let maxValue;
+	  let max = -1;
+	  let index = -1;
+	  for (const value of values) {
+	    ++index;
+	    if (max < 0
+	        ? compare(value, value) === 0
+	        : compare(value, maxValue) > 0) {
+	      maxValue = value;
+	      max = index;
+	    }
+	  }
+	  return max;
+	}
+
+	function scan(values, compare) {
+	  const index = leastIndex(values, compare);
+	  return index < 0 ? undefined : index;
+	}
+
+	function shuffle(array, i0 = 0, i1 = array.length) {
+	  var m = i1 - (i0 = +i0),
+	      t,
+	      i;
+
+	  while (m) {
+	    i = Math.random() * m-- | 0;
+	    t = array[m + i0];
+	    array[m + i0] = array[i + i0];
+	    array[i + i0] = t;
+	  }
+
+	  return array;
+	}
+
+	function sum(values, valueof) {
+	  let sum = 0;
+	  if (valueof === undefined) {
+	    for (let value of values) {
+	      if (value = +value) {
+	        sum += value;
+	      }
+	    }
+	  } else {
+	    let index = -1;
+	    for (let value of values) {
+	      if (value = +valueof(value, ++index, values)) {
+	        sum += value;
+	      }
+	    }
+	  }
+	  return sum;
+	}
+
+	function transpose(matrix) {
+	  if (!(n = matrix.length)) return [];
+	  for (var i = -1, m = min(matrix, length$1), transpose = new Array(m); ++i < m;) {
+	    for (var j = -1, n, row = transpose[i] = new Array(n); ++j < n;) {
+	      row[j] = matrix[j][i];
+	    }
+	  }
+	  return transpose;
+	}
+
+	function length$1(d) {
+	  return d.length;
+	}
+
+	function zip() {
+	  return transpose(arguments);
+	}
+
+	var src = /*#__PURE__*/Object.freeze({
+		__proto__: null,
+		bisect: bisectRight,
+		bisectRight: bisectRight,
+		bisectLeft: bisectLeft,
+		ascending: ascending$1,
+		bisector: bisector,
+		count: count,
+		cross: cross,
+		cumsum: cumsum,
+		descending: descending,
+		deviation: deviation,
+		extent: extent,
+		fsum: fsum,
+		Adder: Adder,
+		group: group,
+		groups: groups,
+		rollup: rollup,
+		rollups: rollups,
+		bin: bin,
+		histogram: bin,
+		thresholdFreedmanDiaconis: freedmanDiaconis,
+		thresholdScott: scott,
+		thresholdSturges: sturges,
+		max: max,
+		maxIndex: maxIndex,
+		mean: mean,
+		median: median,
+		merge: merge,
+		min: min,
+		minIndex: minIndex,
+		pairs: pairs,
+		permute: permute,
+		quantile: quantile,
+		quantileSorted: quantileSorted,
+		quickselect: quickselect,
+		range: sequence,
+		least: least,
+		leastIndex: leastIndex,
+		greatest: greatest,
+		greatestIndex: greatestIndex,
+		scan: scan,
+		shuffle: shuffle,
+		sum: sum,
+		ticks: ticks,
+		tickIncrement: tickIncrement,
+		tickStep: tickStep,
+		transpose: transpose,
+		variance: variance,
+		zip: zip
+	});
+
 	function initRange(domain, range) {
 	  switch (arguments.length) {
 	    case 0: break;
 	    case 1: this.range(domain); break;
 	    default: this.range(range).domain(domain); break;
+	  }
+	  return this;
+	}
+
+	function initInterpolator(domain, interpolator) {
+	  switch (arguments.length) {
+	    case 0: break;
+	    case 1: {
+	      if (typeof domain === "function") this.interpolator(domain);
+	      else this.range(domain);
+	      break;
+	    }
+	    default: {
+	      this.domain(domain);
+	      if (typeof interpolator === "function") this.interpolator(interpolator);
+	      else this.range(interpolator);
+	      break;
+	    }
 	  }
 	  return this;
 	}
@@ -1682,6 +2463,104 @@
 	  initRange.apply(scale, arguments);
 
 	  return scale;
+	}
+
+	function band() {
+	  var scale = ordinal().unknown(undefined),
+	      domain = scale.domain,
+	      ordinalRange = scale.range,
+	      r0 = 0,
+	      r1 = 1,
+	      step,
+	      bandwidth,
+	      round = false,
+	      paddingInner = 0,
+	      paddingOuter = 0,
+	      align = 0.5;
+
+	  delete scale.unknown;
+
+	  function rescale() {
+	    var n = domain().length,
+	        reverse = r1 < r0,
+	        start = reverse ? r1 : r0,
+	        stop = reverse ? r0 : r1;
+	    step = (stop - start) / Math.max(1, n - paddingInner + paddingOuter * 2);
+	    if (round) step = Math.floor(step);
+	    start += (stop - start - step * (n - paddingInner)) * align;
+	    bandwidth = step * (1 - paddingInner);
+	    if (round) start = Math.round(start), bandwidth = Math.round(bandwidth);
+	    var values = sequence(n).map(function(i) { return start + step * i; });
+	    return ordinalRange(reverse ? values.reverse() : values);
+	  }
+
+	  scale.domain = function(_) {
+	    return arguments.length ? (domain(_), rescale()) : domain();
+	  };
+
+	  scale.range = function(_) {
+	    return arguments.length ? ([r0, r1] = _, r0 = +r0, r1 = +r1, rescale()) : [r0, r1];
+	  };
+
+	  scale.rangeRound = function(_) {
+	    return [r0, r1] = _, r0 = +r0, r1 = +r1, round = true, rescale();
+	  };
+
+	  scale.bandwidth = function() {
+	    return bandwidth;
+	  };
+
+	  scale.step = function() {
+	    return step;
+	  };
+
+	  scale.round = function(_) {
+	    return arguments.length ? (round = !!_, rescale()) : round;
+	  };
+
+	  scale.padding = function(_) {
+	    return arguments.length ? (paddingInner = Math.min(1, paddingOuter = +_), rescale()) : paddingInner;
+	  };
+
+	  scale.paddingInner = function(_) {
+	    return arguments.length ? (paddingInner = Math.min(1, _), rescale()) : paddingInner;
+	  };
+
+	  scale.paddingOuter = function(_) {
+	    return arguments.length ? (paddingOuter = +_, rescale()) : paddingOuter;
+	  };
+
+	  scale.align = function(_) {
+	    return arguments.length ? (align = Math.max(0, Math.min(1, _)), rescale()) : align;
+	  };
+
+	  scale.copy = function() {
+	    return band(domain(), [r0, r1])
+	        .round(round)
+	        .paddingInner(paddingInner)
+	        .paddingOuter(paddingOuter)
+	        .align(align);
+	  };
+
+	  return initRange.apply(rescale(), arguments);
+	}
+
+	function pointish(scale) {
+	  var copy = scale.copy;
+
+	  scale.padding = scale.paddingOuter;
+	  delete scale.paddingInner;
+	  delete scale.paddingOuter;
+
+	  scale.copy = function() {
+	    return pointish(copy());
+	  };
+
+	  return scale;
+	}
+
+	function point$1() {
+	  return pointish(band.apply(null, arguments).paddingInner(1));
 	}
 
 	function define(constructor, factory, prototype) {
@@ -2065,7 +2944,7 @@
 	      : m1) * 255;
 	}
 
-	function constant$2(x) {
+	function constant$3(x) {
 	  return function() {
 	    return x;
 	  };
@@ -2085,13 +2964,13 @@
 
 	function gamma(y) {
 	  return (y = +y) === 1 ? nogamma : function(a, b) {
-	    return b - a ? exponential(a, b, y) : constant$2(isNaN(a) ? b : a);
+	    return b - a ? exponential(a, b, y) : constant$3(isNaN(a) ? b : a);
 	  };
 	}
 
 	function nogamma(a, b) {
 	  var d = b - a;
-	  return d ? linear(a, d) : constant$2(isNaN(a) ? b : a);
+	  return d ? linear(a, d) : constant$3(isNaN(a) ? b : a);
 	}
 
 	var rgb$1 = (function rgbGamma(y) {
@@ -2247,7 +3126,7 @@
 
 	function interpolate(a, b) {
 	  var t = typeof b, c;
-	  return b == null || t === "boolean" ? constant$2(b)
+	  return b == null || t === "boolean" ? constant$3(b)
 	      : (t === "number" ? interpolateNumber
 	      : t === "string" ? ((c = color(b)) ? (b = c, rgb$1) : string)
 	      : b instanceof color ? rgb$1
@@ -2264,26 +3143,35 @@
 	  };
 	}
 
-	function constant$3(x) {
+	function piecewise(interpolate, values) {
+	  var i = 0, n = values.length - 1, v = values[0], I = new Array(n < 0 ? 0 : n);
+	  while (i < n) I[i] = interpolate(v, v = values[++i]);
+	  return function(t) {
+	    var i = Math.max(0, Math.min(n - 1, Math.floor(t *= n)));
+	    return I[i](t - i);
+	  };
+	}
+
+	function constant$4(x) {
 	  return function() {
 	    return x;
 	  };
 	}
 
-	function number(x) {
+	function number$1(x) {
 	  return +x;
 	}
 
 	var unit = [0, 1];
 
-	function identity(x) {
+	function identity$1(x) {
 	  return x;
 	}
 
 	function normalize(a, b) {
 	  return (b -= (a = +a))
 	      ? function(x) { return (x - a) / b; }
-	      : constant$3(isNaN(b) ? NaN : 0.5);
+	      : constant$4(isNaN(b) ? NaN : 0.5);
 	}
 
 	function clamper(a, b) {
@@ -2340,14 +3228,14 @@
 	      transform,
 	      untransform,
 	      unknown,
-	      clamp = identity,
+	      clamp = identity$1,
 	      piecewise,
 	      output,
 	      input;
 
 	  function rescale() {
 	    var n = Math.min(domain.length, range.length);
-	    if (clamp !== identity) clamp = clamper(domain[0], domain[n - 1]);
+	    if (clamp !== identity$1) clamp = clamper(domain[0], domain[n - 1]);
 	    piecewise = n > 2 ? polymap : bimap;
 	    output = input = null;
 	    return scale;
@@ -2362,7 +3250,7 @@
 	  };
 
 	  scale.domain = function(_) {
-	    return arguments.length ? (domain = Array.from(_, number), rescale()) : domain.slice();
+	    return arguments.length ? (domain = Array.from(_, number$1), rescale()) : domain.slice();
 	  };
 
 	  scale.range = function(_) {
@@ -2374,7 +3262,7 @@
 	  };
 
 	  scale.clamp = function(_) {
-	    return arguments.length ? (clamp = _ ? true : identity, rescale()) : clamp !== identity;
+	    return arguments.length ? (clamp = _ ? true : identity$1, rescale()) : clamp !== identity$1;
 	  };
 
 	  scale.interpolate = function(_) {
@@ -2392,7 +3280,7 @@
 	}
 
 	function continuous() {
-	  return transformer()(identity, identity);
+	  return transformer()(identity$1, identity$1);
 	}
 
 	// Computes the decimal coefficient and exponent of the specified number x with
@@ -2542,7 +3430,7 @@
 	  "x": function(x) { return Math.round(x).toString(16); }
 	};
 
-	function identity$1(x) {
+	function identity$2(x) {
 	  return x;
 	}
 
@@ -2550,11 +3438,11 @@
 	    prefixes = ["y","z","a","f","p","n","µ","m","","k","M","G","T","P","E","Z","Y"];
 
 	function formatLocale(locale) {
-	  var group = locale.grouping === undefined || locale.thousands === undefined ? identity$1 : formatGroup(map.call(locale.grouping, Number), locale.thousands + ""),
+	  var group = locale.grouping === undefined || locale.thousands === undefined ? identity$2 : formatGroup(map.call(locale.grouping, Number), locale.thousands + ""),
 	      currencyPrefix = locale.currency === undefined ? "" : locale.currency[0] + "",
 	      currencySuffix = locale.currency === undefined ? "" : locale.currency[1] + "",
 	      decimal = locale.decimal === undefined ? "." : locale.decimal + "",
-	      numerals = locale.numerals === undefined ? identity$1 : formatNumerals(map.call(locale.numerals, String)),
+	      numerals = locale.numerals === undefined ? identity$2 : formatNumerals(map.call(locale.numerals, String)),
 	      percent = locale.percent === undefined ? "%" : locale.percent + "",
 	      minus = locale.minus === undefined ? "-" : locale.minus + "",
 	      nan = locale.nan === undefined ? "NaN" : locale.nan + "";
@@ -2813,6 +3701,475 @@
 	  return linearish(scale);
 	}
 
+	function identity$3(domain) {
+	  var unknown;
+
+	  function scale(x) {
+	    return isNaN(x = +x) ? unknown : x;
+	  }
+
+	  scale.invert = scale;
+
+	  scale.domain = scale.range = function(_) {
+	    return arguments.length ? (domain = Array.from(_, number$1), scale) : domain.slice();
+	  };
+
+	  scale.unknown = function(_) {
+	    return arguments.length ? (unknown = _, scale) : unknown;
+	  };
+
+	  scale.copy = function() {
+	    return identity$3(domain).unknown(unknown);
+	  };
+
+	  domain = arguments.length ? Array.from(domain, number$1) : [0, 1];
+
+	  return linearish(scale);
+	}
+
+	function nice(domain, interval) {
+	  domain = domain.slice();
+
+	  var i0 = 0,
+	      i1 = domain.length - 1,
+	      x0 = domain[i0],
+	      x1 = domain[i1],
+	      t;
+
+	  if (x1 < x0) {
+	    t = i0, i0 = i1, i1 = t;
+	    t = x0, x0 = x1, x1 = t;
+	  }
+
+	  domain[i0] = interval.floor(x0);
+	  domain[i1] = interval.ceil(x1);
+	  return domain;
+	}
+
+	function transformLog(x) {
+	  return Math.log(x);
+	}
+
+	function transformExp(x) {
+	  return Math.exp(x);
+	}
+
+	function transformLogn(x) {
+	  return -Math.log(-x);
+	}
+
+	function transformExpn(x) {
+	  return -Math.exp(-x);
+	}
+
+	function pow10(x) {
+	  return isFinite(x) ? +("1e" + x) : x < 0 ? 0 : x;
+	}
+
+	function powp(base) {
+	  return base === 10 ? pow10
+	      : base === Math.E ? Math.exp
+	      : function(x) { return Math.pow(base, x); };
+	}
+
+	function logp(base) {
+	  return base === Math.E ? Math.log
+	      : base === 10 && Math.log10
+	      || base === 2 && Math.log2
+	      || (base = Math.log(base), function(x) { return Math.log(x) / base; });
+	}
+
+	function reflect(f) {
+	  return function(x) {
+	    return -f(-x);
+	  };
+	}
+
+	function loggish(transform) {
+	  var scale = transform(transformLog, transformExp),
+	      domain = scale.domain,
+	      base = 10,
+	      logs,
+	      pows;
+
+	  function rescale() {
+	    logs = logp(base), pows = powp(base);
+	    if (domain()[0] < 0) {
+	      logs = reflect(logs), pows = reflect(pows);
+	      transform(transformLogn, transformExpn);
+	    } else {
+	      transform(transformLog, transformExp);
+	    }
+	    return scale;
+	  }
+
+	  scale.base = function(_) {
+	    return arguments.length ? (base = +_, rescale()) : base;
+	  };
+
+	  scale.domain = function(_) {
+	    return arguments.length ? (domain(_), rescale()) : domain();
+	  };
+
+	  scale.ticks = function(count) {
+	    var d = domain(),
+	        u = d[0],
+	        v = d[d.length - 1],
+	        r;
+
+	    if (r = v < u) i = u, u = v, v = i;
+
+	    var i = logs(u),
+	        j = logs(v),
+	        p,
+	        k,
+	        t,
+	        n = count == null ? 10 : +count,
+	        z = [];
+
+	    if (!(base % 1) && j - i < n) {
+	      i = Math.floor(i), j = Math.ceil(j);
+	      if (u > 0) for (; i <= j; ++i) {
+	        for (k = 1, p = pows(i); k < base; ++k) {
+	          t = p * k;
+	          if (t < u) continue;
+	          if (t > v) break;
+	          z.push(t);
+	        }
+	      } else for (; i <= j; ++i) {
+	        for (k = base - 1, p = pows(i); k >= 1; --k) {
+	          t = p * k;
+	          if (t < u) continue;
+	          if (t > v) break;
+	          z.push(t);
+	        }
+	      }
+	      if (z.length * 2 < n) z = ticks(u, v, n);
+	    } else {
+	      z = ticks(i, j, Math.min(j - i, n)).map(pows);
+	    }
+
+	    return r ? z.reverse() : z;
+	  };
+
+	  scale.tickFormat = function(count, specifier) {
+	    if (specifier == null) specifier = base === 10 ? ".0e" : ",";
+	    if (typeof specifier !== "function") specifier = format(specifier);
+	    if (count === Infinity) return specifier;
+	    if (count == null) count = 10;
+	    var k = Math.max(1, base * count / scale.ticks().length); // TODO fast estimate?
+	    return function(d) {
+	      var i = d / pows(Math.round(logs(d)));
+	      if (i * base < base - 0.5) i *= base;
+	      return i <= k ? specifier(d) : "";
+	    };
+	  };
+
+	  scale.nice = function() {
+	    return domain(nice(domain(), {
+	      floor: function(x) { return pows(Math.floor(logs(x))); },
+	      ceil: function(x) { return pows(Math.ceil(logs(x))); }
+	    }));
+	  };
+
+	  return scale;
+	}
+
+	function log() {
+	  var scale = loggish(transformer()).domain([1, 10]);
+
+	  scale.copy = function() {
+	    return copy(scale, log()).base(scale.base());
+	  };
+
+	  initRange.apply(scale, arguments);
+
+	  return scale;
+	}
+
+	function transformSymlog(c) {
+	  return function(x) {
+	    return Math.sign(x) * Math.log1p(Math.abs(x / c));
+	  };
+	}
+
+	function transformSymexp(c) {
+	  return function(x) {
+	    return Math.sign(x) * Math.expm1(Math.abs(x)) * c;
+	  };
+	}
+
+	function symlogish(transform) {
+	  var c = 1, scale = transform(transformSymlog(c), transformSymexp(c));
+
+	  scale.constant = function(_) {
+	    return arguments.length ? transform(transformSymlog(c = +_), transformSymexp(c)) : c;
+	  };
+
+	  return linearish(scale);
+	}
+
+	function symlog() {
+	  var scale = symlogish(transformer());
+
+	  scale.copy = function() {
+	    return copy(scale, symlog()).constant(scale.constant());
+	  };
+
+	  return initRange.apply(scale, arguments);
+	}
+
+	function transformPow(exponent) {
+	  return function(x) {
+	    return x < 0 ? -Math.pow(-x, exponent) : Math.pow(x, exponent);
+	  };
+	}
+
+	function transformSqrt(x) {
+	  return x < 0 ? -Math.sqrt(-x) : Math.sqrt(x);
+	}
+
+	function transformSquare(x) {
+	  return x < 0 ? -x * x : x * x;
+	}
+
+	function powish(transform) {
+	  var scale = transform(identity$1, identity$1),
+	      exponent = 1;
+
+	  function rescale() {
+	    return exponent === 1 ? transform(identity$1, identity$1)
+	        : exponent === 0.5 ? transform(transformSqrt, transformSquare)
+	        : transform(transformPow(exponent), transformPow(1 / exponent));
+	  }
+
+	  scale.exponent = function(_) {
+	    return arguments.length ? (exponent = +_, rescale()) : exponent;
+	  };
+
+	  return linearish(scale);
+	}
+
+	function pow() {
+	  var scale = powish(transformer());
+
+	  scale.copy = function() {
+	    return copy(scale, pow()).exponent(scale.exponent());
+	  };
+
+	  initRange.apply(scale, arguments);
+
+	  return scale;
+	}
+
+	function sqrt() {
+	  return pow.apply(null, arguments).exponent(0.5);
+	}
+
+	function square(x) {
+	  return Math.sign(x) * x * x;
+	}
+
+	function unsquare(x) {
+	  return Math.sign(x) * Math.sqrt(Math.abs(x));
+	}
+
+	function radial() {
+	  var squared = continuous(),
+	      range = [0, 1],
+	      round = false,
+	      unknown;
+
+	  function scale(x) {
+	    var y = unsquare(squared(x));
+	    return isNaN(y) ? unknown : round ? Math.round(y) : y;
+	  }
+
+	  scale.invert = function(y) {
+	    return squared.invert(square(y));
+	  };
+
+	  scale.domain = function(_) {
+	    return arguments.length ? (squared.domain(_), scale) : squared.domain();
+	  };
+
+	  scale.range = function(_) {
+	    return arguments.length ? (squared.range((range = Array.from(_, number$1)).map(square)), scale) : range.slice();
+	  };
+
+	  scale.rangeRound = function(_) {
+	    return scale.range(_).round(true);
+	  };
+
+	  scale.round = function(_) {
+	    return arguments.length ? (round = !!_, scale) : round;
+	  };
+
+	  scale.clamp = function(_) {
+	    return arguments.length ? (squared.clamp(_), scale) : squared.clamp();
+	  };
+
+	  scale.unknown = function(_) {
+	    return arguments.length ? (unknown = _, scale) : unknown;
+	  };
+
+	  scale.copy = function() {
+	    return radial(squared.domain(), range)
+	        .round(round)
+	        .clamp(squared.clamp())
+	        .unknown(unknown);
+	  };
+
+	  initRange.apply(scale, arguments);
+
+	  return linearish(scale);
+	}
+
+	function quantile$1() {
+	  var domain = [],
+	      range = [],
+	      thresholds = [],
+	      unknown;
+
+	  function rescale() {
+	    var i = 0, n = Math.max(1, range.length);
+	    thresholds = new Array(n - 1);
+	    while (++i < n) thresholds[i - 1] = quantile(domain, i / n);
+	    return scale;
+	  }
+
+	  function scale(x) {
+	    return isNaN(x = +x) ? unknown : range[bisectRight(thresholds, x)];
+	  }
+
+	  scale.invertExtent = function(y) {
+	    var i = range.indexOf(y);
+	    return i < 0 ? [NaN, NaN] : [
+	      i > 0 ? thresholds[i - 1] : domain[0],
+	      i < thresholds.length ? thresholds[i] : domain[domain.length - 1]
+	    ];
+	  };
+
+	  scale.domain = function(_) {
+	    if (!arguments.length) return domain.slice();
+	    domain = [];
+	    for (let d of _) if (d != null && !isNaN(d = +d)) domain.push(d);
+	    domain.sort(ascending$1);
+	    return rescale();
+	  };
+
+	  scale.range = function(_) {
+	    return arguments.length ? (range = Array.from(_), rescale()) : range.slice();
+	  };
+
+	  scale.unknown = function(_) {
+	    return arguments.length ? (unknown = _, scale) : unknown;
+	  };
+
+	  scale.quantiles = function() {
+	    return thresholds.slice();
+	  };
+
+	  scale.copy = function() {
+	    return quantile$1()
+	        .domain(domain)
+	        .range(range)
+	        .unknown(unknown);
+	  };
+
+	  return initRange.apply(scale, arguments);
+	}
+
+	function quantize() {
+	  var x0 = 0,
+	      x1 = 1,
+	      n = 1,
+	      domain = [0.5],
+	      range = [0, 1],
+	      unknown;
+
+	  function scale(x) {
+	    return x <= x ? range[bisectRight(domain, x, 0, n)] : unknown;
+	  }
+
+	  function rescale() {
+	    var i = -1;
+	    domain = new Array(n);
+	    while (++i < n) domain[i] = ((i + 1) * x1 - (i - n) * x0) / (n + 1);
+	    return scale;
+	  }
+
+	  scale.domain = function(_) {
+	    return arguments.length ? ([x0, x1] = _, x0 = +x0, x1 = +x1, rescale()) : [x0, x1];
+	  };
+
+	  scale.range = function(_) {
+	    return arguments.length ? (n = (range = Array.from(_)).length - 1, rescale()) : range.slice();
+	  };
+
+	  scale.invertExtent = function(y) {
+	    var i = range.indexOf(y);
+	    return i < 0 ? [NaN, NaN]
+	        : i < 1 ? [x0, domain[0]]
+	        : i >= n ? [domain[n - 1], x1]
+	        : [domain[i - 1], domain[i]];
+	  };
+
+	  scale.unknown = function(_) {
+	    return arguments.length ? (unknown = _, scale) : scale;
+	  };
+
+	  scale.thresholds = function() {
+	    return domain.slice();
+	  };
+
+	  scale.copy = function() {
+	    return quantize()
+	        .domain([x0, x1])
+	        .range(range)
+	        .unknown(unknown);
+	  };
+
+	  return initRange.apply(linearish(scale), arguments);
+	}
+
+	function threshold() {
+	  var domain = [0.5],
+	      range = [0, 1],
+	      unknown,
+	      n = 1;
+
+	  function scale(x) {
+	    return x <= x ? range[bisectRight(domain, x, 0, n)] : unknown;
+	  }
+
+	  scale.domain = function(_) {
+	    return arguments.length ? (domain = Array.from(_), n = Math.min(domain.length, range.length - 1), scale) : domain.slice();
+	  };
+
+	  scale.range = function(_) {
+	    return arguments.length ? (range = Array.from(_), n = Math.min(domain.length, range.length - 1), scale) : range.slice();
+	  };
+
+	  scale.invertExtent = function(y) {
+	    var i = range.indexOf(y);
+	    return [domain[i - 1], domain[i]];
+	  };
+
+	  scale.unknown = function(_) {
+	    return arguments.length ? (unknown = _, scale) : unknown;
+	  };
+
+	  scale.copy = function() {
+	    return threshold()
+	        .domain(domain)
+	        .range(range)
+	        .unknown(unknown);
+	  };
+
+	  return initRange.apply(scale, arguments);
+	}
+
 	var t0 = new Date,
 	    t1 = new Date;
 
@@ -2884,9 +4241,63 @@
 	  return interval;
 	}
 
+	var millisecond = newInterval(function() {
+	  // noop
+	}, function(date, step) {
+	  date.setTime(+date + step);
+	}, function(start, end) {
+	  return end - start;
+	});
+
+	// An optimized implementation for this simple case.
+	millisecond.every = function(k) {
+	  k = Math.floor(k);
+	  if (!isFinite(k) || !(k > 0)) return null;
+	  if (!(k > 1)) return millisecond;
+	  return newInterval(function(date) {
+	    date.setTime(Math.floor(date / k) * k);
+	  }, function(date, step) {
+	    date.setTime(+date + step * k);
+	  }, function(start, end) {
+	    return (end - start) / k;
+	  });
+	};
+
+	var durationSecond = 1e3;
 	var durationMinute = 6e4;
+	var durationHour = 36e5;
 	var durationDay = 864e5;
 	var durationWeek = 6048e5;
+
+	var second = newInterval(function(date) {
+	  date.setTime(date - date.getMilliseconds());
+	}, function(date, step) {
+	  date.setTime(+date + step * durationSecond);
+	}, function(start, end) {
+	  return (end - start) / durationSecond;
+	}, function(date) {
+	  return date.getUTCSeconds();
+	});
+
+	var minute = newInterval(function(date) {
+	  date.setTime(date - date.getMilliseconds() - date.getSeconds() * durationSecond);
+	}, function(date, step) {
+	  date.setTime(+date + step * durationMinute);
+	}, function(start, end) {
+	  return (end - start) / durationMinute;
+	}, function(date) {
+	  return date.getMinutes();
+	});
+
+	var hour = newInterval(function(date) {
+	  date.setTime(date - date.getMilliseconds() - date.getSeconds() * durationSecond - date.getMinutes() * durationMinute);
+	}, function(date, step) {
+	  date.setTime(+date + step * durationHour);
+	}, function(start, end) {
+	  return (end - start) / durationHour;
+	}, function(date) {
+	  return date.getHours();
+	});
 
 	var day = newInterval(function(date) {
 	  date.setHours(0, 0, 0, 0);
@@ -2917,6 +4328,17 @@
 	var friday = weekday(5);
 	var saturday = weekday(6);
 
+	var month = newInterval(function(date) {
+	  date.setDate(1);
+	  date.setHours(0, 0, 0, 0);
+	}, function(date, step) {
+	  date.setMonth(date.getMonth() + step);
+	}, function(start, end) {
+	  return end.getMonth() - start.getMonth() + (end.getFullYear() - start.getFullYear()) * 12;
+	}, function(date) {
+	  return date.getMonth();
+	});
+
 	var year = newInterval(function(date) {
 	  date.setMonth(0, 1);
 	  date.setHours(0, 0, 0, 0);
@@ -2938,6 +4360,26 @@
 	    date.setFullYear(date.getFullYear() + step * k);
 	  });
 	};
+
+	var utcMinute = newInterval(function(date) {
+	  date.setUTCSeconds(0, 0);
+	}, function(date, step) {
+	  date.setTime(+date + step * durationMinute);
+	}, function(start, end) {
+	  return (end - start) / durationMinute;
+	}, function(date) {
+	  return date.getUTCMinutes();
+	});
+
+	var utcHour = newInterval(function(date) {
+	  date.setUTCMinutes(0, 0, 0);
+	}, function(date, step) {
+	  date.setTime(+date + step * durationHour);
+	}, function(start, end) {
+	  return (end - start) / durationHour;
+	}, function(date) {
+	  return date.getUTCHours();
+	});
 
 	var utcDay = newInterval(function(date) {
 	  date.setUTCHours(0, 0, 0, 0);
@@ -2967,6 +4409,17 @@
 	var utcThursday = utcWeekday(4);
 	var utcFriday = utcWeekday(5);
 	var utcSaturday = utcWeekday(6);
+
+	var utcMonth = newInterval(function(date) {
+	  date.setUTCDate(1);
+	  date.setUTCHours(0, 0, 0, 0);
+	}, function(date, step) {
+	  date.setUTCMonth(date.getUTCMonth() + step);
+	}, function(start, end) {
+	  return end.getUTCMonth() - start.getUTCMonth() + (end.getUTCFullYear() - start.getUTCFullYear()) * 12;
+	}, function(date) {
+	  return date.getUTCMonth();
+	});
 
 	var utcYear = newInterval(function(date) {
 	  date.setUTCMonth(0, 1);
@@ -3667,9 +5120,406 @@
 	  return locale$1;
 	}
 
-	var slice$1 = Array.prototype.slice;
+	var durationSecond$1 = 1000,
+	    durationMinute$1 = durationSecond$1 * 60,
+	    durationHour$1 = durationMinute$1 * 60,
+	    durationDay$1 = durationHour$1 * 24,
+	    durationWeek$1 = durationDay$1 * 7,
+	    durationMonth = durationDay$1 * 30,
+	    durationYear = durationDay$1 * 365;
 
-	function identity$2(x) {
+	function date$1(t) {
+	  return new Date(t);
+	}
+
+	function number$2(t) {
+	  return t instanceof Date ? +t : +new Date(+t);
+	}
+
+	function calendar(year, month, week, day, hour, minute, second, millisecond, format) {
+	  var scale = continuous(),
+	      invert = scale.invert,
+	      domain = scale.domain;
+
+	  var formatMillisecond = format(".%L"),
+	      formatSecond = format(":%S"),
+	      formatMinute = format("%I:%M"),
+	      formatHour = format("%I %p"),
+	      formatDay = format("%a %d"),
+	      formatWeek = format("%b %d"),
+	      formatMonth = format("%B"),
+	      formatYear = format("%Y");
+
+	  var tickIntervals = [
+	    [second,  1,      durationSecond$1],
+	    [second,  5,  5 * durationSecond$1],
+	    [second, 15, 15 * durationSecond$1],
+	    [second, 30, 30 * durationSecond$1],
+	    [minute,  1,      durationMinute$1],
+	    [minute,  5,  5 * durationMinute$1],
+	    [minute, 15, 15 * durationMinute$1],
+	    [minute, 30, 30 * durationMinute$1],
+	    [  hour,  1,      durationHour$1  ],
+	    [  hour,  3,  3 * durationHour$1  ],
+	    [  hour,  6,  6 * durationHour$1  ],
+	    [  hour, 12, 12 * durationHour$1  ],
+	    [   day,  1,      durationDay$1   ],
+	    [   day,  2,  2 * durationDay$1   ],
+	    [  week,  1,      durationWeek$1  ],
+	    [ month,  1,      durationMonth ],
+	    [ month,  3,  3 * durationMonth ],
+	    [  year,  1,      durationYear  ]
+	  ];
+
+	  function tickFormat(date) {
+	    return (second(date) < date ? formatMillisecond
+	        : minute(date) < date ? formatSecond
+	        : hour(date) < date ? formatMinute
+	        : day(date) < date ? formatHour
+	        : month(date) < date ? (week(date) < date ? formatDay : formatWeek)
+	        : year(date) < date ? formatMonth
+	        : formatYear)(date);
+	  }
+
+	  function tickInterval(interval, start, stop) {
+	    if (interval == null) interval = 10;
+
+	    // If a desired tick count is specified, pick a reasonable tick interval
+	    // based on the extent of the domain and a rough estimate of tick size.
+	    // Otherwise, assume interval is already a time interval and use it.
+	    if (typeof interval === "number") {
+	      var target = Math.abs(stop - start) / interval,
+	          i = bisector(function(i) { return i[2]; }).right(tickIntervals, target),
+	          step;
+	      if (i === tickIntervals.length) {
+	        step = tickStep(start / durationYear, stop / durationYear, interval);
+	        interval = year;
+	      } else if (i) {
+	        i = tickIntervals[target / tickIntervals[i - 1][2] < tickIntervals[i][2] / target ? i - 1 : i];
+	        step = i[1];
+	        interval = i[0];
+	      } else {
+	        step = Math.max(tickStep(start, stop, interval), 1);
+	        interval = millisecond;
+	      }
+	      return interval.every(step);
+	    }
+
+	    return interval;
+	  }
+
+	  scale.invert = function(y) {
+	    return new Date(invert(y));
+	  };
+
+	  scale.domain = function(_) {
+	    return arguments.length ? domain(Array.from(_, number$2)) : domain().map(date$1);
+	  };
+
+	  scale.ticks = function(interval) {
+	    var d = domain(),
+	        t0 = d[0],
+	        t1 = d[d.length - 1],
+	        r = t1 < t0,
+	        t;
+	    if (r) t = t0, t0 = t1, t1 = t;
+	    t = tickInterval(interval, t0, t1);
+	    t = t ? t.range(t0, t1 + 1) : []; // inclusive stop
+	    return r ? t.reverse() : t;
+	  };
+
+	  scale.tickFormat = function(count, specifier) {
+	    return specifier == null ? tickFormat : format(specifier);
+	  };
+
+	  scale.nice = function(interval) {
+	    var d = domain();
+	    return (interval = tickInterval(interval, d[0], d[d.length - 1]))
+	        ? domain(nice(d, interval))
+	        : scale;
+	  };
+
+	  scale.copy = function() {
+	    return copy(scale, calendar(year, month, week, day, hour, minute, second, millisecond, format));
+	  };
+
+	  return scale;
+	}
+
+	function time() {
+	  return initRange.apply(calendar(year, month, sunday, day, hour, minute, second, millisecond, timeFormat).domain([new Date(2000, 0, 1), new Date(2000, 0, 2)]), arguments);
+	}
+
+	function utcTime() {
+	  return initRange.apply(calendar(utcYear, utcMonth, utcSunday, utcDay, utcHour, utcMinute, second, millisecond, utcFormat).domain([Date.UTC(2000, 0, 1), Date.UTC(2000, 0, 2)]), arguments);
+	}
+
+	function transformer$1() {
+	  var x0 = 0,
+	      x1 = 1,
+	      t0,
+	      t1,
+	      k10,
+	      transform,
+	      interpolator = identity$1,
+	      clamp = false,
+	      unknown;
+
+	  function scale(x) {
+	    return isNaN(x = +x) ? unknown : interpolator(k10 === 0 ? 0.5 : (x = (transform(x) - t0) * k10, clamp ? Math.max(0, Math.min(1, x)) : x));
+	  }
+
+	  scale.domain = function(_) {
+	    return arguments.length ? ([x0, x1] = _, t0 = transform(x0 = +x0), t1 = transform(x1 = +x1), k10 = t0 === t1 ? 0 : 1 / (t1 - t0), scale) : [x0, x1];
+	  };
+
+	  scale.clamp = function(_) {
+	    return arguments.length ? (clamp = !!_, scale) : clamp;
+	  };
+
+	  scale.interpolator = function(_) {
+	    return arguments.length ? (interpolator = _, scale) : interpolator;
+	  };
+
+	  function range(interpolate) {
+	    return function(_) {
+	      var r0, r1;
+	      return arguments.length ? ([r0, r1] = _, interpolator = interpolate(r0, r1), scale) : [interpolator(0), interpolator(1)];
+	    };
+	  }
+
+	  scale.range = range(interpolate);
+
+	  scale.rangeRound = range(interpolateRound);
+
+	  scale.unknown = function(_) {
+	    return arguments.length ? (unknown = _, scale) : unknown;
+	  };
+
+	  return function(t) {
+	    transform = t, t0 = t(x0), t1 = t(x1), k10 = t0 === t1 ? 0 : 1 / (t1 - t0);
+	    return scale;
+	  };
+	}
+
+	function copy$1(source, target) {
+	  return target
+	      .domain(source.domain())
+	      .interpolator(source.interpolator())
+	      .clamp(source.clamp())
+	      .unknown(source.unknown());
+	}
+
+	function sequential() {
+	  var scale = linearish(transformer$1()(identity$1));
+
+	  scale.copy = function() {
+	    return copy$1(scale, sequential());
+	  };
+
+	  return initInterpolator.apply(scale, arguments);
+	}
+
+	function sequentialLog() {
+	  var scale = loggish(transformer$1()).domain([1, 10]);
+
+	  scale.copy = function() {
+	    return copy$1(scale, sequentialLog()).base(scale.base());
+	  };
+
+	  return initInterpolator.apply(scale, arguments);
+	}
+
+	function sequentialSymlog() {
+	  var scale = symlogish(transformer$1());
+
+	  scale.copy = function() {
+	    return copy$1(scale, sequentialSymlog()).constant(scale.constant());
+	  };
+
+	  return initInterpolator.apply(scale, arguments);
+	}
+
+	function sequentialPow() {
+	  var scale = powish(transformer$1());
+
+	  scale.copy = function() {
+	    return copy$1(scale, sequentialPow()).exponent(scale.exponent());
+	  };
+
+	  return initInterpolator.apply(scale, arguments);
+	}
+
+	function sequentialSqrt() {
+	  return sequentialPow.apply(null, arguments).exponent(0.5);
+	}
+
+	function sequentialQuantile() {
+	  var domain = [],
+	      interpolator = identity$1;
+
+	  function scale(x) {
+	    if (!isNaN(x = +x)) return interpolator((bisectRight(domain, x, 1) - 1) / (domain.length - 1));
+	  }
+
+	  scale.domain = function(_) {
+	    if (!arguments.length) return domain.slice();
+	    domain = [];
+	    for (let d of _) if (d != null && !isNaN(d = +d)) domain.push(d);
+	    domain.sort(ascending$1);
+	    return scale;
+	  };
+
+	  scale.interpolator = function(_) {
+	    return arguments.length ? (interpolator = _, scale) : interpolator;
+	  };
+
+	  scale.range = function() {
+	    return domain.map((d, i) => interpolator(i / (domain.length - 1)));
+	  };
+
+	  scale.quantiles = function(n) {
+	    return Array.from({length: n + 1}, (_, i) => quantile(domain, i / n));
+	  };
+
+	  scale.copy = function() {
+	    return sequentialQuantile(interpolator).domain(domain);
+	  };
+
+	  return initInterpolator.apply(scale, arguments);
+	}
+
+	function transformer$2() {
+	  var x0 = 0,
+	      x1 = 0.5,
+	      x2 = 1,
+	      s = 1,
+	      t0,
+	      t1,
+	      t2,
+	      k10,
+	      k21,
+	      interpolator = identity$1,
+	      transform,
+	      clamp = false,
+	      unknown;
+
+	  function scale(x) {
+	    return isNaN(x = +x) ? unknown : (x = 0.5 + ((x = +transform(x)) - t1) * (s * x < s * t1 ? k10 : k21), interpolator(clamp ? Math.max(0, Math.min(1, x)) : x));
+	  }
+
+	  scale.domain = function(_) {
+	    return arguments.length ? ([x0, x1, x2] = _, t0 = transform(x0 = +x0), t1 = transform(x1 = +x1), t2 = transform(x2 = +x2), k10 = t0 === t1 ? 0 : 0.5 / (t1 - t0), k21 = t1 === t2 ? 0 : 0.5 / (t2 - t1), s = t1 < t0 ? -1 : 1, scale) : [x0, x1, x2];
+	  };
+
+	  scale.clamp = function(_) {
+	    return arguments.length ? (clamp = !!_, scale) : clamp;
+	  };
+
+	  scale.interpolator = function(_) {
+	    return arguments.length ? (interpolator = _, scale) : interpolator;
+	  };
+
+	  function range(interpolate) {
+	    return function(_) {
+	      var r0, r1, r2;
+	      return arguments.length ? ([r0, r1, r2] = _, interpolator = piecewise(interpolate, [r0, r1, r2]), scale) : [interpolator(0), interpolator(0.5), interpolator(1)];
+	    };
+	  }
+
+	  scale.range = range(interpolate);
+
+	  scale.rangeRound = range(interpolateRound);
+
+	  scale.unknown = function(_) {
+	    return arguments.length ? (unknown = _, scale) : unknown;
+	  };
+
+	  return function(t) {
+	    transform = t, t0 = t(x0), t1 = t(x1), t2 = t(x2), k10 = t0 === t1 ? 0 : 0.5 / (t1 - t0), k21 = t1 === t2 ? 0 : 0.5 / (t2 - t1), s = t1 < t0 ? -1 : 1;
+	    return scale;
+	  };
+	}
+
+	function diverging() {
+	  var scale = linearish(transformer$2()(identity$1));
+
+	  scale.copy = function() {
+	    return copy$1(scale, diverging());
+	  };
+
+	  return initInterpolator.apply(scale, arguments);
+	}
+
+	function divergingLog() {
+	  var scale = loggish(transformer$2()).domain([0.1, 1, 10]);
+
+	  scale.copy = function() {
+	    return copy$1(scale, divergingLog()).base(scale.base());
+	  };
+
+	  return initInterpolator.apply(scale, arguments);
+	}
+
+	function divergingSymlog() {
+	  var scale = symlogish(transformer$2());
+
+	  scale.copy = function() {
+	    return copy$1(scale, divergingSymlog()).constant(scale.constant());
+	  };
+
+	  return initInterpolator.apply(scale, arguments);
+	}
+
+	function divergingPow() {
+	  var scale = powish(transformer$2());
+
+	  scale.copy = function() {
+	    return copy$1(scale, divergingPow()).exponent(scale.exponent());
+	  };
+
+	  return initInterpolator.apply(scale, arguments);
+	}
+
+	function divergingSqrt() {
+	  return divergingPow.apply(null, arguments).exponent(0.5);
+	}
+
+	var src$1 = /*#__PURE__*/Object.freeze({
+		__proto__: null,
+		scaleBand: band,
+		scalePoint: point$1,
+		scaleIdentity: identity$3,
+		scaleLinear: linear$1,
+		scaleLog: log,
+		scaleSymlog: symlog,
+		scaleOrdinal: ordinal,
+		scaleImplicit: implicit,
+		scalePow: pow,
+		scaleSqrt: sqrt,
+		scaleRadial: radial,
+		scaleQuantile: quantile$1,
+		scaleQuantize: quantize,
+		scaleThreshold: threshold,
+		scaleTime: time,
+		scaleUtc: utcTime,
+		scaleSequential: sequential,
+		scaleSequentialLog: sequentialLog,
+		scaleSequentialPow: sequentialPow,
+		scaleSequentialSqrt: sequentialSqrt,
+		scaleSequentialSymlog: sequentialSymlog,
+		scaleSequentialQuantile: sequentialQuantile,
+		scaleDiverging: diverging,
+		scaleDivergingLog: divergingLog,
+		scaleDivergingPow: divergingPow,
+		scaleDivergingSqrt: divergingSqrt,
+		scaleDivergingSymlog: divergingSymlog,
+		tickFormat: tickFormat
+	});
+
+	var slice$2 = Array.prototype.slice;
+
+	function identity$4(x) {
 	  return x;
 	}
 
@@ -3687,7 +5537,7 @@
 	  return "translate(0," + (y + 0.5) + ")";
 	}
 
-	function number$1(scale) {
+	function number$3(scale) {
 	  return function(d) {
 	    return +scale(d);
 	  };
@@ -3718,12 +5568,12 @@
 
 	  function axis(context) {
 	    var values = tickValues == null ? (scale.ticks ? scale.ticks.apply(scale, tickArguments) : scale.domain()) : tickValues,
-	        format = tickFormat == null ? (scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : identity$2) : tickFormat,
+	        format = tickFormat == null ? (scale.tickFormat ? scale.tickFormat.apply(scale, tickArguments) : identity$4) : tickFormat,
 	        spacing = Math.max(tickSizeInner, 0) + tickPadding,
 	        range = scale.range(),
 	        range0 = +range[0] + 0.5,
 	        range1 = +range[range.length - 1] + 0.5,
-	        position = (scale.bandwidth ? center : number$1)(scale.copy()),
+	        position = (scale.bandwidth ? center : number$3)(scale.copy()),
 	        selection = context.selection ? context.selection() : context,
 	        path = selection.selectAll(".domain").data([null]),
 	        tick = selection.selectAll(".tick").data(values, scale).order(),
@@ -3795,15 +5645,15 @@
 	  };
 
 	  axis.ticks = function() {
-	    return tickArguments = slice$1.call(arguments), axis;
+	    return tickArguments = slice$2.call(arguments), axis;
 	  };
 
 	  axis.tickArguments = function(_) {
-	    return arguments.length ? (tickArguments = _ == null ? [] : slice$1.call(_), axis) : tickArguments.slice();
+	    return arguments.length ? (tickArguments = _ == null ? [] : slice$2.call(_), axis) : tickArguments.slice();
 	  };
 
 	  axis.tickValues = function(_) {
-	    return arguments.length ? (tickValues = _ == null ? null : slice$1.call(_), axis) : tickValues && tickValues.slice();
+	    return arguments.length ? (tickValues = _ == null ? null : slice$2.call(_), axis) : tickValues && tickValues.slice();
 	  };
 
 	  axis.tickFormat = function(_) {
@@ -3844,6 +5694,366 @@
 	}
 
 	var schemeAccent = colors("7fc97fbeaed4fdc086ffff99386cb0f0027fbf5b17666666");
+
+	var d3AreaLabel = createCommonjsModule(function (module, exports) {
+	(function (global, factory) {
+		 factory(exports, src, src$1) ;
+	}(commonjsGlobal, (function (exports,d3Array,d3Scale) {
+	// Determines whether or not a rectangle
+	// of the given width and height
+	// fits in side the given area.
+	function fits(options) {
+
+	  // Internall variables.
+	  var x0, x1, i0, i1, j, d, top, bottom, ceiling, floor,
+
+	      // The width in pixels of the rectangle to test.
+	      width = options.width,
+
+	      // The height in pixels of the rectangle to test.
+	      height = options.height,
+
+	      // The data that defines the area to test against.
+	      data = options.data,
+
+	      // A boolean that indicates we're only interested
+	      // in a Boolean return value, not full solution details.
+	      justTest = options.justTest,
+
+	      // The maximum X value.
+	      xMax = options.xMax,
+
+	      // A function that returns the index in the data array
+	      // that comes before the X value passed into it.
+	      xIndex = options.xIndex,
+
+	      // The X value accessor.
+	      x = options.x,
+
+	      // The Y0 value accessor.
+	      y1 = options.y1,
+
+	      // The Y1 value accessor.
+	      y0 = options.y0;
+
+	  // Check if we can fit the rectangle at an X position
+	  // corresponding with one of the X values from the data.
+	  for(i0 = 0; i0 < data.length; i0++) {
+	    d = data[i0];
+
+	    // The left edge of the rectangle.
+	    x0 = x(d);
+
+	    // The right edge of the rectangle.
+	    x1 = x0 + width;
+
+	    // Don't go off the right edge of the area.
+	    if (x1 > xMax) {
+	      break;
+	    }
+	    
+	    // Test until we reach the rightmost X position
+	    // within the X positions of the data points.
+	    i1 = xIndex(x1);
+	    ceiling = -Infinity;
+	    floor = Infinity;
+	    for(j = i0; j <= i1; j++) {
+	      d = data[j];
+
+	      bottom = y0(d);
+	      if(bottom < floor) {
+	        floor = bottom;
+	      }
+
+	      top = y1(d);
+	      if(top > ceiling) {
+	        ceiling = top;
+	      }
+
+	      // Break as soon as we know the rectangle wil not fit.
+	      if ((floor - ceiling) < height) {
+	        break;
+	      }
+	    }
+
+	    // If the rectangle fits at the current x0 position,
+	    // the report that the rectangle indeed fits.
+	    if ((floor - ceiling) >= height) {
+
+	      // Avoid creating new objects unnecessarily while just testing.
+	      if (justTest) {
+	        return true;
+	      }
+
+	      // Output the full solution for use in label transform.
+	      return {
+	        x: x0,
+	        y: ceiling,
+	        width: width,
+	        height: height
+	      };
+	    }
+	  }
+	  return false;
+	}
+
+	// Returns a transform string that will
+	// translate and scale the label to the computed position and size.
+	function toTransformString() {
+	  return [
+	    'translate(' + this.xTranslate + ',' + this.yTranslate + ')',
+	    'scale(' + this.scale + ')'
+	  ].join(' ');
+	}
+
+	function areaLabel(area) {
+	  var x,
+	      y0,
+	      y1,
+	      bisectorX,
+	      minHeight = 2,
+	      epsilon = 0.01,
+	      maxIterations = 100,
+	      interpolate = true,
+	      interpolateResolution = 800,
+	      paddingLeft = 0,
+	      paddingRight = 0,
+	      paddingTop = 0,
+	      paddingBottom = 0,
+	      numIterations;
+
+	  // Gets the height of the area for a particular datum.
+	  function getHeight(d) {
+	    return y0(d) - y1(d);
+	  }
+
+	  // Finds the largest value that passes the test
+	  // within some epsilon tolerance.
+	  // https://en.wikipedia.org/wiki/Bisection_method#Algorithm
+	  function bisection(a, b, test, epsilon, maxIterations) {
+	    var i, c, passesTest, withinEpsilon;
+	    for(i = 0; i < maxIterations; i++){
+	      c = (a + b) / 2;
+	      passesTest = test(c);
+	      withinEpsilon = (b - a) / 2 < epsilon;
+
+	      // In our case, the returned value *must* pass the test,
+	      // so it's not enough only to check if the value is within epsilon.
+	      if ( passesTest && withinEpsilon) {
+	        numIterations = i;
+	        return c;
+	      }
+	      if (passesTest) {
+	        a = c;
+	      } else {
+	        b = c;
+	      }
+	    }
+	    return null;
+	  }
+	  
+	  function interpolateY(data, xValue, y) {
+	    var i = bisectorX(data, xValue, 0, data.length - 1),
+	        a = data[i - 1],
+	        b = data[i],
+	        ax = x(a),
+	        ay = y(a),
+	        bx = x(b),
+	        by = y(b),
+	        t = (xValue - ax) / (bx - ax);
+	    return ay * (1 - t) + by * t;
+	  }
+
+	  // Returns true if there is at least one rectangle
+	  // of the given aspect ratio and scale
+	  // that fits somewhere within the area.
+
+	  function my(data) {
+
+	    // The bounding box of the text label as-is.
+	    var box = this.getBBox();
+
+	    // Account for padding.
+	    var paddingFactorX = 1 + paddingLeft + paddingRight;
+	    var paddingFactorY = 1 + paddingTop + paddingBottom;
+	    var boxWidth = box.width * paddingFactorX;
+	    var boxHeight = box.height * paddingFactorY;
+
+	    // The aspect ratio of the text label bounding box.
+	    var aspect = boxWidth / boxHeight;
+
+	    // Compute maximum possible label bounding box height in pixels.
+	    var maxHeight = d3Array.max(data, getHeight);
+
+	    // Compute the X extent once, to be reused for every height test.
+	    var xExtent = d3Array.extent(data, x);
+
+	    // The test function for use in the bisection method.
+	    var options = {
+	      justTest: true,
+	      xMax: xExtent[1]
+	    };
+
+	    if (interpolate) {
+	      var interpolateResolutionScale = d3Scale.scaleLinear()
+	        .domain([0, interpolateResolution - 1])
+	        .range(xExtent);
+
+	      var interpolatedData = d3Array.range(interpolateResolution)
+	        .map(function (i) {
+	          var xValue = interpolateResolutionScale(i);
+	          return {
+	            x: xValue,
+	            y0: interpolateY(data, xValue, y0),
+	            y1: interpolateY(data, xValue, y1)
+	          };
+	        });
+
+	      options.xIndex = function (x) {
+	        return Math.ceil(interpolateResolutionScale.invert(x));
+	      };
+	      options.data = interpolatedData;
+	      options.x = function (d) { return d.x; };
+	      options.y0 = function (d) { return d.y0; };
+	      options.y1 = function (d) { return d.y1; };
+	    } else {
+	      options.xIndex = function (x) {
+	        return bisectorX(data, x);
+	      }, options.data = data;
+	      options.x = x;
+	      options.y0 = y0;
+	      options.y1 = y1;
+	    }
+
+	    var test = function (testHeight){
+	      options.height = testHeight;
+	      options.width = aspect * testHeight;
+	      return fits(options);
+	    };
+
+	    // Use the bisection method to find the largest height label that fits.
+	    var height = bisection(minHeight, maxHeight, test, epsilon, maxIterations);
+
+	    // If there's not any position that works,
+	    // return an object that will scale the label down to nothing,
+	    // and indicate that the algorithm failed.
+	    if (height === null) {
+	      return {
+	        failed: true,
+	        numIterations: maxIterations,
+	        scale: 0,
+	        xTranslate: 0,
+	        yTranslate: 0,
+	        toString: toTransformString
+	      };
+	    }
+
+	    // Get the (x, y, width, height) for the largest height label that fits.
+	    options.justTest = false;
+	    var fit = fits(options);
+
+	    // Account for padding.
+	    var xInner = fit.x + fit.width / paddingFactorX * paddingLeft;
+	    var yInner = fit.y + fit.height / paddingFactorY * paddingTop;
+
+	    // Compute the scale and translate.
+	    fit.scale = height / boxHeight;
+	    fit.xTranslate = xInner - fit.scale * box.x;
+	    fit.yTranslate = yInner - fit.scale * box.y;
+
+	    // Expose the toString method, which generates a transform string.
+	    fit.toString = toTransformString;
+
+	    // Expose how many iterations the bisection method took.
+	    fit.numIterations = numIterations;
+
+	    return fit;
+	  }
+
+	  my.x = function(_) {
+	    if (arguments.length) {
+	      x = _;
+	      bisectorX = d3Array.bisector(x).right;
+	      return my;
+	    }
+	    return x;
+	  };
+
+	  my.y0 = function(_) {
+	    return arguments.length ? (y0 = _, my) : y0;
+	  };
+
+	  my.y1 = function(_) {
+	    return arguments.length ? (y1 = _, my) : y1;
+	  };
+
+	  my.area = function(area) {
+	    return my.x(area.x()).y0(area.y0()).y1(area.y1());
+	  };
+
+	  my.minHeight = function(_) {
+	    return arguments.length ? (minHeight = +_, my) : minHeight;
+	  };
+
+	  my.epsilon = function(_) {
+	    return arguments.length ? (epsilon = +_, my) : epsilon;
+	  };
+
+	  my.maxIterations = function(_) {
+	    return arguments.length ? (maxIterations = +_, my) : maxIterations;
+	  };
+
+	  my.interpolate = function(_) {
+	    return arguments.length ? (interpolate = +_, my) : interpolate;
+	  };
+
+	  my.interpolateResolution = function(_) {
+	    return arguments.length ? (interpolateResolution = +_, my) : interpolateResolution;
+	  };
+
+	  my.paddingLeft = function(_) {
+	    return arguments.length ? (paddingLeft = +_, my) : paddingLeft;
+	  };
+
+	  my.paddingRight = function(_) {
+	    return arguments.length ? (paddingRight = +_, my) : paddingRight;
+	  };
+
+	  my.paddingTop = function(_) {
+	    return arguments.length ? (paddingTop = +_, my) : paddingTop;
+	  };
+
+	  my.paddingBottom = function(_) {
+	    return arguments.length ? (paddingBottom = +_, my) : paddingBottom;
+	  };
+
+	  my.paddingX = function(_) {
+	    return my.paddingLeft(_).paddingRight(_);
+	  };
+
+	  my.paddingY = function(_) {
+	    return my.paddingTop(_).paddingBottom(_);
+	  };
+
+	  my.padding = function(_) {
+	    return my.paddingX(_).paddingY(_);
+	  };
+
+	  if (area) {
+	    my.area(area);
+	  }
+
+	  return my;
+	}
+
+	exports.areaLabel = areaLabel;
+
+	Object.defineProperty(exports, '__esModule', { value: true });
+
+	})));
+	});
+
+	var d3AreaLabel$1 = /*@__PURE__*/unwrapExports(d3AreaLabel);
 
 	// use UN comtrade data to construct an SVG chart showing each major trading 
 
@@ -3987,6 +6197,13 @@
 			.attr('stroke','white')
 			.attr('d',areaGen)
 			.append('title').text(d=>d.key); // country name	
+		let labels = svg.select('g#labels')
+			.selectAll('text')
+			.data(series)
+			.join('text')
+			.text( d=> d.key )
+			.attr('transform',d3AreaLabel$1.areaLabel(areaGen))
+			.attr('opacity',0.5);
 	}
 
 	function setupSVG(){
@@ -3995,6 +6212,7 @@
 			.attr('width',width)
 			.attr('height',height);
 		svg.append('g').attr('id','dataSpace');
+		svg.append('g').attr('id','labels');
 		svg.append('g').attr('id','xAxis');
 		svg.append('g').attr('id','yAxis');
 		return svg

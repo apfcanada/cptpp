@@ -13,6 +13,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { schemeAccent } from 'd3-scale-chromatic'
 import { timeParse, timeFormat } from 'd3-time-format'
 import { timeYear, timeMonth } from 'd3-time'
+import { areaLabel } from 'd3-area-label'
 
 const period2date = timeParse('%Y')
 const date2period = timeFormat('%Y')
@@ -154,6 +155,13 @@ function updateChart(svg,data,X,Y){
 		.attr('stroke','white')
 		.attr('d',areaGen)
 		.append('title').text(d=>d.key) // country name	
+	let labels = svg.select('g#labels')
+		.selectAll('text')
+		.data(series)
+		.join('text')
+		.text( d=> d.key )
+		.attr('transform',areaLabel(areaGen))
+		.attr('opacity',0.5)
 }
 
 function setupSVG(){
@@ -162,6 +170,7 @@ function setupSVG(){
 		.attr('width',width)
 		.attr('height',height)
 	svg.append('g').attr('id','dataSpace')
+	svg.append('g').attr('id','labels')
 	svg.append('g').attr('id','xAxis')
 	svg.append('g').attr('id','yAxis')
 	return svg
