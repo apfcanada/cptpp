@@ -25,10 +25,6 @@ const margin = {top: 5, right: 5, bottom: 20, left: 40}
 // https://comtrade.un.org/Data/cache/partnerAreas.json
 const world = 0
 const canada = 124
-const china = 156
-const usa = 842
-// stores the partners for which we have already pulled a complete trade history
-const haveDataFor = new Set()
 
 export async function addComtradeData( HScode ){
 
@@ -37,14 +33,13 @@ export async function addComtradeData( HScode ){
 	container.select('svg').remove()
 	let loading = container.append('p').text('Loading...')
 	
-	// get data for all available times, for world + 4 top trade partners
-	let tradePartners = [ world, canada, china, usa ]
-	const data = await getAllDataFor( HScode, tradePartners )
+	// get data for all available times, for world + top trade partners
+	let tradePartners = [ world, canada ]
+	var sourceData = await getAllDataFor( HScode, tradePartners, 'all' )
+	sourceData = uniqueData(sourceData)
 	
 	// find a list of available dates 
-	let periods = [ ... new Set( data.map( d => d.period ) ) ]
-		.map( period => period2date( `${period}` ) )
-		.sort( (a,b) => a - b )	
+	let periods = getPeriods(sourceData)
 	// create the scales and axis functions
 	const dateRange = [
 		new Date( Math.min(...periods) ),
@@ -55,7 +50,7 @@ export async function addComtradeData( HScode ){
 	const xAxis = axisBottom(X)
 		.tickFormat( timeFormat('%Y') )
 	let maxTradeValue = Math.max( ... 
-		data
+		sourceData
 			.filter( d => d.ptCode == world )
 			.map( d => d.TradeValue )
 	)
@@ -64,8 +59,71 @@ export async function addComtradeData( HScode ){
 		.range( [ height - margin.bottom, 0 + margin.top ] )
 	const yAxis = axisLeft(Y).ticks(5,'$.2~s')
 	
-	// now format the data and add the areas
-	let [ trade, partners ] = formatData( data, periods )
+	const svg = setupSVG()
+	
+	// apply the axes
+	svg.select('g#xAxis')
+		.attr('transform',`translate(0,${height-margin.bottom})`)
+		.call( xAxis )
+	svg.select('g#yAxis')
+		.attr('transform',`translate(${margin.left},0)`)
+		.call( yAxis )
+
+	updateChart(svg,sourceData,X,Y)
+	
+	// get trade with ALL partners in the last period
+	let newData = await getAllDataFor(
+		HScode, 'all', periods.map( p => date2period(p) ).slice(-1)
+	)
+//	sourceData = uniqueData( sourceData.concat(newData) );
+//	updateChart(svg,sourceData,X,Y);
+	// of these, find those with >= 5% market share
+	let worldTrade = newData.find( d => d.ptCode == world ).TradeValue
+	let unqueriedPartners = newData.map( d => {
+		if( d.TradeValue >= worldTrade/20 && d.ptCode != world ){
+			return d.ptCode
+		}
+	} ).filter( d => d )
+	while(unqueriedPartners.length > 0){
+		// pop 5
+		let queryPartners = unqueriedPartners.slice(-5)
+		unqueriedPartners = unqueriedPartners.slice(0,-5)
+		let newData = await getAllDataFor(
+			HScode, queryPartners, 'all'
+		)
+		sourceData = uniqueData( sourceData.concat(newData) );
+		updateChart(svg,sourceData,X,Y);
+	}
+	// remove "loading..." now that we're done
+	loading.remove()	
+}
+
+function updateChart(svg,data,X,Y){
+	// the data needs to be formatted and organized for the stack generator
+	let partners = new Set( data.map( d => d.ptTitle ) )
+	let periods = getPeriods(data)
+	//	remove 
+	partners.delete('World')
+	
+	const allTrade = periods.map( period => {
+		let periodData = data
+			.filter( d => `${d.period}` == date2period(period) )
+		let worldTrade = periodData.find( d => d.ptCode == world ).TradeValue
+		let partnerTrade = periodData
+			.filter( d => d.ptCode != world )
+			.reduce( (a,b) => a + b.TradeValue, 0 )
+		if( partnerTrade > worldTrade ){
+			console.warn('world trade too small?',period, partnerTrade)
+		}
+		let trade = { 'period': period, 'Other': worldTrade - partnerTrade }
+		for ( let partner of partners ){
+			let record = periodData.find( d => d.ptTitle == partner )
+			trade[partner] = record ? record.TradeValue : 0
+		}
+		return trade
+	} )
+
+	partners.add('Other')
 
 	const colors = scaleOrdinal()
 		.domain([...partners])
@@ -80,30 +138,17 @@ export async function addComtradeData( HScode ){
 		.keys([...partners])
 		.offset( stackOffsetNone )
 		.order( stackOrderNone )
-		(trade)
-	// remove "loading..." just before drawing
-	loading.remove()
-	const svg = setupSVG()
+		(allTrade)
+		
 	svg.select('g#dataSpace')
 		.selectAll('path')
-		.data(series)
+		.data(series,d=>d.key)
 		.join('path')
 		.attr('fill', (d,i) => colors(i) )
 		.attr('stroke-width',0.5)
 		.attr('stroke','white')
 		.attr('d',areaGen)
 		.append('title').text(d=>d.key) // country name	
-
-	// apply the axes
-	svg.select('g#xAxis')
-		.attr('transform',`translate(0,${height-margin.bottom})`)
-		.call( xAxis )
-	svg.select('g#yAxis')
-		.attr('transform',`translate(${margin.left},0)`)
-		.call( yAxis )
-
-	return
-	
 }
 
 function setupSVG(){
@@ -117,48 +162,35 @@ function setupSVG(){
 	return svg
 }
 
-async function getAllDataFor( HScode, partners ){
-	let response = await json(
-		formatAPIcall( HScode, partners, undefined )
-	)
-	partners.map( partnerCode => haveDataFor.add( partnerCode ) )
-	return response.dataset
-}
-
-function formatAPIcall( HScode, partners=['all'], periods='all' ){
+async function getAllDataFor( HScode, partners, periods ){
 	// https://comtrade.un.org/Data/Doc/API
 	let params = new URLSearchParams({
 		'r': 392,       // reporter = japan 
 		'rg': 1,        // imports (to Japan)
-		'p': partners.join(','), // partner regions
+		'p': typeof(partners) == 'string' ? partners : partners.join(','),
 		'freq': 'A',    // monthly 
-		'ps': periods,  // data for all periods
+		'ps': typeof(periods) == 'string' ? periods : periods.join(','),
 		'px': 'HS', 'cc': HScode  // search by HS code
 	})
-	return `https://comtrade.un.org/api/get?${params}`
+	let url = `https://comtrade.un.org/api/get?${params}`
+	let response = await json( url )
+	return response.dataset
 }
 
-function formatData( dataset, periods ){
-	// the data needs to be formatted and organized for the stack generator
-	let partners = new Set( dataset.map(d=>d.ptTitle) )
-	partners.delete('World')
-	
-	const allTrade = periods.map( period => {
-		let periodData = dataset
-			.filter( d => `${d.period}` == date2period(period) )
-		let worldTrade = periodData.find( d => d.ptCode == world ).TradeValue
-		let partnerTrade = periodData
-			.filter( d => d.ptTitle != 'World' )
-			.reduce( (a,b) => a + b.TradeValue, 0 )
-		let trade = { 'period': period, 'Other': worldTrade - partnerTrade }
-		for ( let partner of partners ){
-			let record = periodData.find( d => d.ptTitle == partner )
-			trade[partner] = record ? record.TradeValue : 0
+function getPeriods(data){
+	return [ ... new Set( data.map( d => d.period ) ) ]
+		.map( period => period2date( `${period}` ) )
+		.sort( (a,b) => a - b )	
+}
+
+function uniqueData(data){
+	// filter out duplicate data
+	const dataPoints = new Set()
+	return data.map( d => {
+		let uid = `${d.ptCode} - ${d.period}`
+		if( ! dataPoints.has(uid) ){
+			dataPoints.add(uid)
+			return d
 		}
-		return trade
-	} )
-	partners.add('Other')
-	return [ allTrade, partners ]
+	} ).filter( d => d )
 }
-
-
