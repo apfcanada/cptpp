@@ -3859,6 +3859,8 @@
 	const world = 0;
 	const canada = 124;
 
+	const colors$1 = ordinal().range(schemeAccent);
+
 	async function addComtradeData( HScode ){
 
 		// add loading text and remove any existing SVG
@@ -3957,10 +3959,7 @@
 		} );
 
 		partners.add('Other');
-
-		const colors = ordinal()
-			.domain([...partners])
-			.range(schemeAccent);
+			
 		const areaGen = area()
 			.x( d => X(d.data.period) )
 			.y0( d => Y(d[0]) )
@@ -3977,7 +3976,13 @@
 			.selectAll('path')
 			.data(series,d=>d.key)
 			.join('path')
-			.attr('fill', (d,i) => colors(i) )
+			.attr('fill', (d,i) => {
+				switch(d.key){
+					case 'Canada': return 'red'
+					case 'Other': return 'grey'
+					default: return colors$1(i)
+				}
+			} )
 			.attr('stroke-width',0.5)
 			.attr('stroke','white')
 			.attr('d',areaGen)

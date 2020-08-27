@@ -26,6 +26,8 @@ const margin = {top: 5, right: 5, bottom: 20, left: 40}
 const world = 0
 const canada = 124
 
+const colors = scaleOrdinal().range(schemeAccent)
+
 export async function addComtradeData( HScode ){
 
 	// add loading text and remove any existing SVG
@@ -124,10 +126,7 @@ function updateChart(svg,data,X,Y){
 	} )
 
 	partners.add('Other')
-
-	const colors = scaleOrdinal()
-		.domain([...partners])
-		.range(schemeAccent)
+		
 	const areaGen = area()
 		.x( d => X(d.data.period) )
 		.y0( d => Y(d[0]) )
@@ -144,7 +143,13 @@ function updateChart(svg,data,X,Y){
 		.selectAll('path')
 		.data(series,d=>d.key)
 		.join('path')
-		.attr('fill', (d,i) => colors(i) )
+		.attr('fill', (d,i) => {
+			switch(d.key){
+				case 'Canada': return 'red'
+				case 'Other': return 'grey'
+				default: return colors(i)
+			}
+		} )
 		.attr('stroke-width',0.5)
 		.attr('stroke','white')
 		.attr('d',areaGen)
