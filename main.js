@@ -92,24 +92,6 @@ function updatePage(data){
 		region.gain   = Number(data[`${region.abbr}gain`])
 		region.change = Number(data[`${region.abbr}gainPercent`])
 	})
-	// modify the table of expected gains, updating it if there is relevant data, 
-	// hiding it if not
-	select('#expectedGains')
-		.style('display', data.CAgain == '' ? 'none' : null )
-		.select('table#regionalGains tbody')
-		.selectAll('tr')
-		.data( regions, r => r.abbr )
-		.join('tr')
-		.style('font-weight', d => d.name == 'Canada' ? 'bold' : null )
-		.selectAll('td')
-		.data(d => [ 
-			d.name,  
-			d.gain != 0 ? USD.format(d.gain) : 'None',
-			(d.change==0||isNaN(d.change)) ? '' : PCT.format(d.change)
-		] )
-		.join('td').text(t=>t)
-
-	// TODO insert a chart displaying the contents of the table graphically
 
 	let svg = select('#expectedGains svg')
 	let width = svg.attr('width')
@@ -118,7 +100,6 @@ function updatePage(data){
 	const barHeight = 12
 	
 	let affectedRegions = regions.filter( r => r.gain != 0 )
-	console.log( affectedRegions )
 	const X = scaleLinear() // $ value axis
 		.domain( [
 			Math.min( ... affectedRegions.map( r => r.gain ) ),
