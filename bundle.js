@@ -6268,13 +6268,13 @@
 		{abbr:'MB', name:'Manitoba',        color:'#a7a9ac'},
 		{abbr:'ROC',name:'Rest of Canada',  color:'#111111'},
 		//
-		{abbr:'JP', name:'Japan',           color:'#111111'},
-		{abbr:'ML', name:'Malaysia',        color:'#111111'},
-		{abbr:'MX', name:'Mexico',          color:'#111111'},
-		{abbr:'NZ', name:'New Zealand',     color:'#111111'},
-		{abbr:'CN', name:'China',           color:'#111111'},
-		{abbr:'EU', name:'European Union',  color:'#111111'},
-		{abbr:'US', name:'United States',   color:'#111111'}
+		{abbr:'JP', name:'Japan',           color:'#555'},
+		{abbr:'ML', name:'Malaysia',        color:'#555'},
+		{abbr:'MX', name:'Mexico',          color:'#555'},
+		{abbr:'NZ', name:'New Zealand',     color:'#555'},
+		{abbr:'CN', name:'China',           color:'#555'},
+		{abbr:'EU', name:'European Union',  color:'#555'},
+		{abbr:'US', name:'United States',   color:'#555'}
 	];
 
 	// create the search box, populated with data
@@ -6360,6 +6360,7 @@
 		let width = svg.attr('width');
 		let height = svg.attr('height');
 		const margin = {top: 5, right: 5, bottom: 40, left: 5};
+		const barHeight = 12;
 		
 		let affectedRegions = regions.filter( r => r.gain != 0 );
 		console.log( affectedRegions );
@@ -6370,33 +6371,40 @@
 			] )
 			.range( [ 0 + margin.left, width - margin.right ] );
 		// apply the axis
-		svg.append('g')
+		svg.select('g#xAxis')
 			.attr('transform',`translate(0,${height-margin.bottom})`)
 			.call( axisBottom(X).ticks(6,'$.2~s') );
 		// add a vertical line at $0
-		svg.append('path')
+		svg.select('path#zero')
 			.attr('d',`M ${X(0)} ${margin.top} L ${X(0)} ${height-margin.bottom}`)
 			.attr('stroke','grey');
 		
 		const Y = linear$1()
 			.domain( [ 0, affectedRegions.length - 1 ] )
-			.range( [ margin.top, height - margin.bottom ] );
+			.range( [ margin.top, height - margin.bottom - barHeight - 5 ] );
 		
-		svg.selectAll('rect')
-			.data(affectedRegions)
-			.join('rect')
-			.attr('y', (d,i) => Y(i) )
-			.attr('x', d => X( Math.min( 0, d.gain ) ) )
-			.attr('height',10)
-			.attr('width', d => {
-				if(d.gain > 0){
-					return X(d.gain) - X(0)
-				}else {
-					return X(0) - X(d.gain)
-				}
-			} )
-			.attr('fill', d => d.color )
-			.attr('title', d => d.name );
+		svg.selectAll('g.bar')
+			.remove()
+			.data(affectedRegions,r=>r.name)
+			.join('g').classed('bar',true)
+			.call( g => {
+				g.append('title').text(d=>`${d.name}: ${USD.format(d.gain)}`);
+				g.append('text').text(d=>d.name)
+					.attr('y', (d,i) => Y(i) + barHeight - 2 )
+					.attr('x', d => d.gain > 0 ? X(0)-5 : X(0)+5 )
+					.attr('text-anchor',d => d.gain > 0 ? 'end' : 'start' )
+					.attr('font-size',`${barHeight}px`);
+				g.append('rect')
+					.attr('y', (d,i) => Y(i) )
+					.attr('x', d => X( Math.min( 0, d.gain ) ) )
+					.attr('height',barHeight)
+					.attr('width', d => {
+						if(d.gain > 0){ return X(d.gain) - X(0) }
+						else { return X(0) - X(d.gain) }
+					} )
+					.attr('fill', d => d.color )
+					.attr('title', d => d.name );
+			} );
 	}
 
 })));
