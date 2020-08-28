@@ -3,6 +3,9 @@ import { csv } from 'd3-fetch'
 import { select } from 'd3-selection'
 import { addComtradeData } from './comtrade'
 
+import { scaleLinear } from 'd3-scale'
+import { axisBottom } from 'd3-axis'
+
 // formatting
 const USD = new Intl.NumberFormat( 'en-CA',
 	{ style: 'currency', currency: 'USD', currencyDisplay: 'symbol',
@@ -74,8 +77,7 @@ function updatePage(data){
 	const params = new URLSearchParams(location.search)
 	params.set('hs6',data.HScode)
 	window.history.replaceState({},'',`${location.pathname}?${params}`)
-//	var code = /^\d{6}$/.test( params.get('hs6') ) ? params.get('hs6') : null
-	addComtradeData( `${data.HScode}` )
+	addComtradeData(data.HScode)
 	select('#infoBox').style('display','block')
 	select('#HScode').text(`${data.HScode}`)
 	select('#HSdescription').text(data.description)
@@ -90,6 +92,8 @@ function updatePage(data){
 		region.gain   = Number(data[`${region.abbr}gain`])
 		region.change = Number(data[`${region.abbr}gainPercent`])
 	})
+	// modify the table of expected gains, updating it if there is relevant data, 
+	// hiding it if not
 	select('#expectedGains')
 		.style('display', data.CAgain == '' ? 'none' : null )
 		.select('table#regionalGains tbody')
@@ -104,5 +108,70 @@ function updatePage(data){
 			(d.change==0||isNaN(d.change)) ? '' : PCT.format(d.change)
 		] )
 		.join('td').text(t=>t)
+
+	// TODO insert a chart displaying the contents of the table graphically
+
+	let svg = select('#expectedGains svg')
+	let width = svg.attr('width')
+	let height = svg.attr('height')
+	const margin = {top: 5, right: 5, bottom: 40, left: 5}
+	
+	let affectedRegions = regions.filter( r => r.gain != 0 )
+	console.log( affectedRegions )
+	const X = scaleLinear() // $ value axis
+		.domain( [
+			Math.min( ... affectedRegions.map( r => r.gain ) ),
+			Math.max( ... affectedRegions.map( r => r.gain ) )
+		] )
+		.range( [ 0 + margin.left, width - margin.right ] )
+	// apply the axis
+	svg.append('g')
+		.attr('transform',`translate(0,${height-margin.bottom})`)
+		.call( axisBottom(X).ticks(6,'$.2~s') )
+	// add a vertical line at $0
+	svg.append('path')
+		.attr('d',`M ${X(0)} ${margin.top} L ${X(0)} ${height-margin.bottom}`)
+		.attr('stroke','grey')
+	
+	const Y = scaleLinear()
+		.domain( [ 0, affectedRegions.length - 1 ] )
+		.range( [ margin.top, height - margin.bottom ] )
+	
+	svg.selectAll('rect')
+		.data(affectedRegions)
+		.join('rect')
+		.attr('y', (d,i) => Y(i) )
+		.attr('x', d => X( Math.min( 0, d.gain ) ) )
+		.attr('height',10)
+		.attr('width', d => {
+			if(d.gain > 0){
+				return X(d.gain) - X(0)
+			}else{
+				return X(0) - X(d.gain)
+			}
+		} )
+		.attr('fill', d => d.color )
+		.attr('title', d => d.name )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
