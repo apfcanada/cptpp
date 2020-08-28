@@ -23,13 +23,13 @@ const regions = [
 	{abbr:'MB', name:'Manitoba',        color:'#a7a9ac'},
 	{abbr:'ROC',name:'Rest of Canada',  color:'#111111'},
 	//
-	{abbr:'JP', name:'Japan',           color:'#555'},
-	{abbr:'ML', name:'Malaysia',        color:'#555'},
-	{abbr:'MX', name:'Mexico',          color:'#555'},
-	{abbr:'NZ', name:'New Zealand',     color:'#555'},
-	{abbr:'CN', name:'China',           color:'#555'},
-	{abbr:'EU', name:'European Union',  color:'#555'},
-	{abbr:'US', name:'United States',   color:'#555'}
+	{abbr:'JP', name:'Japan',           color:'grey'},
+	{abbr:'ML', name:'Malaysia',        color:'grey'},
+	{abbr:'MX', name:'Mexico',          color:'grey'},
+	{abbr:'NZ', name:'New Zealand',     color:'grey'},
+	{abbr:'CN', name:'China',           color:'grey'},
+	{abbr:'EU', name:'European Union',  color:'grey'},
+	{abbr:'US', name:'United States',   color:'grey'}
 ]
 
 // create the search box, populated with data
@@ -93,13 +93,20 @@ function updatePage(data){
 		region.change = Number(data[`${region.abbr}gainPercent`])
 	})
 
-	let svg = select('#expectedGains svg')
-	let width = svg.attr('width')
-	let height = svg.attr('height')
+	// populate / update the chart of projected gains
+
+	let affectedRegions = regions.filter( r => r.gain != 0 )
+
+	const svg = select('#expectedGains svg')
+	const width = svg.attr('width')
 	const margin = {top: 5, right: 5, bottom: 40, left: 5}
 	const barHeight = 12
-	
-	let affectedRegions = regions.filter( r => r.gain != 0 )
+	const barSpace = 4
+	let height = ( affectedRegions.length * ( barHeight + barSpace) + 
+		margin.top + margin.bottom )
+	svg.attr('height',height)
+
+
 	const X = scaleLinear() // $ value axis
 		.domain( [
 			Math.min( ... affectedRegions.map( r => r.gain ) ),
