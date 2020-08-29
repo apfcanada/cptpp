@@ -6338,6 +6338,9 @@
 
 		// populate / update the chart of projected gains
 
+		select('#expectedGains')
+			.style('display', data.CAgain == '' ? 'none' : null );
+
 		let affectedRegions = regions.filter( r => r.gain != 0 );
 
 		const svg = select('#expectedGains svg');
