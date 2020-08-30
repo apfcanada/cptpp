@@ -29,12 +29,21 @@ const canada = 124
 
 const colors = scaleOrdinal().range(schemeAccent)
 
-export async function addComtradeData( HScode ){
+// sometimes this gets called too many times, so this check is required
+var currentlyWorking = null
 
-	// add loading text and remove any existing SVG
-	let container = select('div#comtradeData')
-	container.select('svg').remove()
-	let loading = container.append('p').text('Loading...')
+export async function addComtradeData( HScode ){
+	if( currentlyWorking && currentlyWorking == HScode ){ return }
+	currentlyWorking = HScode
+	
+	const svg = select('div#comtradeData svg')
+	
+	// add loading text
+	let loading = select('div#comtradeData')
+		.insert('p',' svg')
+		.text('Loading...')
+	// remove any preexisting data
+	svg.select('g.dataSpace').selectAll().remove()
 	
 	// get data for all available times, for world + top trade partners
 	let tradePartners = [ world, canada ]
@@ -62,13 +71,11 @@ export async function addComtradeData( HScode ){
 		.range( [ height - margin.bottom, 0 + margin.top ] )
 	const yAxis = axisLeft(Y).ticks(5,'$.2~s')
 	
-	const svg = setupSVG()
-	
 	// apply the axes
-	svg.select('g#xAxis')
+	svg.select('g.xAxis')
 		.attr('transform',`translate(0,${height-margin.bottom})`)
 		.call( xAxis )
-	svg.select('g#yAxis')
+	svg.select('g.yAxis')
 		.attr('transform',`translate(${margin.left},0)`)
 		.call( yAxis )
 
@@ -98,7 +105,8 @@ export async function addComtradeData( HScode ){
 		updateChart(svg,sourceData,X,Y);
 	}
 	// remove "loading..." now that we're done
-	loading.remove()	
+	loading.remove()
+	currentlyWorking = null
 }
 
 function updateChart(svg,data,X,Y){
@@ -140,7 +148,7 @@ function updateChart(svg,data,X,Y){
 		.order( stackOrderNone )
 		(allTrade)
 		
-	svg.select('g#dataSpace')
+	svg.select('g.dataSpace')
 		.selectAll('path')
 		.data(series,d=>d.key)
 		.join('path')
@@ -155,25 +163,13 @@ function updateChart(svg,data,X,Y){
 		.attr('stroke','white')
 		.attr('d',areaGen)
 		.append('title').text(d=>d.key) // country name	
-	let labels = svg.select('g#labels')
+	let labels = svg.select('g.labels')
 		.selectAll('text')
 		.data(series)
 		.join('text')
 		.text( d=> d.key )
 		.attr('transform',areaLabel(areaGen))
 		.attr('opacity',0.5)
-}
-
-function setupSVG(){
-	let svg = select('div#comtradeData')
-		.append('svg')
-		.attr('width',width)
-		.attr('height',height)
-	svg.append('g').attr('id','dataSpace')
-	svg.append('g').attr('id','labels')
-	svg.append('g').attr('id','xAxis')
-	svg.append('g').attr('id','yAxis')
-	return svg
 }
 
 async function getAllDataFor( HScode, partners, periods ){
