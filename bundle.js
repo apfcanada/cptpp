@@ -6083,13 +6083,13 @@
 		// add loading text
 		let loading = select('div#comtradeData')
 			.insert('p',' svg')
-			.text('Loading...');
+			.text('Loading trade data...');
 		// remove any preexisting data
-		svg.select('g.dataSpace').selectAll().remove();
+		svg.select('g.dataSpace').selectAll('path').remove();
+		svg.select('g.labels').selectAll('text').remove();
 		
-		// get data for all available times, for world + top trade partners
-		let tradePartners = [ world, canada ];
-		var sourceData = await getAllDataFor( HScode, tradePartners, 'all' );
+		// get data for all available times, for world + Canada
+		var sourceData = await getAllDataFor( HScode, [world,canada], 'all' );
 		sourceData = uniqueData(sourceData);
 		
 		// find a list of available dates 
@@ -6122,6 +6122,7 @@
 			.call( yAxis );
 
 		updateChart(svg,sourceData,X,Y);
+		loading.text('Loading more trade data...');
 		
 		// get trade with ALL partners in the last period
 		let newData = await getAllDataFor(
