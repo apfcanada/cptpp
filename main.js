@@ -102,7 +102,7 @@ function updatePage(data){
 
 	const svg = select('#expectedGains svg')
 	const width = svg.attr('width')
-	const margin = {top: 5, right: 5, bottom: 40, left: 5}
+	const margin = {top: 5, right: 5, bottom: 20, left: 5}
 	const barHeight = 12
 	const barSpace = 4
 	let height = ( affectedRegions.length * ( barHeight + barSpace) + 

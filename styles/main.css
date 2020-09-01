@@ -49,25 +49,9 @@ body {
 #oldTariffRate {
 	text-decoration-color: red; }
 
-	
-table {
-	border-collapse: collapse; }
-table td {
-	text-align: center;
-	font-family: monospace; }
-table td,
-table th {
-	border-left: 1px solid grey; }
-table td:nth-child(1),
-table th:nth-child(1) {
-	text-align: left;
-	font-family: Avenir, sans-serif;
-	border-left: none; }
-table th, 
-table td {
-	padding: 5px; }
-table th {
-	border-bottom: 1px solid; }
-table tbody tr:nth-child(odd) {
-  background: #eee;
-}
+/* footnotes */
+h3 sup {
+	font-weight: normal; }
+#footnotes {
+	border-top: 1px solid #bbb;
+	font-size: 0.8em; }
