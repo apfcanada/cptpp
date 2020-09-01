@@ -1087,6 +1087,12 @@
 	      : new Selection([[selector]], root);
 	}
 
+	function selectAll(selector) {
+	  return typeof selector === "string"
+	      ? new Selection([document.querySelectorAll(selector)], [document.documentElement])
+	      : new Selection([selector == null ? [] : selector], root);
+	}
+
 	var pi = Math.PI,
 	    tau = 2 * pi,
 	    epsilon = 1e-6,
@@ -6122,7 +6128,7 @@
 			.call( yAxis );
 
 		updateChart(svg,sourceData,X,Y);
-		loading.text('Loading more trade data...');
+		loading.text('Loading data for additional countries...');
 		
 		// get trade with ALL partners in the last period
 		let newData = await getAllDataFor(
@@ -6283,7 +6289,7 @@
 			minLength: 2,
 			name: 'hs6',
 			templates: { 
-				inputValue: d => d ? d.HScode : ' ',
+				inputValue: d => d ? d.HScode : '',
 				suggestion: d => {
 					let text = `${d.HScode} - ${d.description}`;
 					if(d.hasEstimatedGain){ return text }
@@ -6323,12 +6329,13 @@
 		select('#infoBox').style('display','block');
 		select('#HScode').text(`${data.HScode}`);
 		select('#HSdescription').text(data.description);
-		// don't show tariffs if not available
-		select('#tariffs').style('display',data.tariffRate==''?'none':'block');
+		// don't show data if not available
+		selectAll('.model-results')
+			.style('display',data.hasEstimatedGain ? 'block' : 'none' );
+		select('#noEffect')
+			.style('display', data.hasEstimatedGain ? 'none': 'block' );
 		select('#oldTariffRate').text( TRF.format(data.initialTariffRate));
 		select('#newTariffRate').text( TRF.format(data.tariffRate) );
-		// display link if no estimated gains
-		select('#noEffect').style('display', data.CAgain==''?'block':'none');
 		// set additional region data specific to product category
 		regions.map( region => {
 			region.gain   = Number(data[`${region.abbr}gain`]);

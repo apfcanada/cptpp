@@ -1,6 +1,6 @@
 import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv } from 'd3-fetch'
-import { select } from 'd3-selection'
+import { select,selectAll } from 'd3-selection'
 import { addComtradeData } from './comtrade'
 
 import { scaleLinear } from 'd3-scale'
@@ -41,7 +41,7 @@ csv('./data/unified-data.csv').then( HScodes => {
 		minLength: 2,
 		name: 'hs6',
 		templates: { 
-			inputValue: d => d ? d.HScode : ' ',
+			inputValue: d => d ? d.HScode : '',
 			suggestion: d => {
 				let text = `${d.HScode} - ${d.description}`
 				if(d.hasEstimatedGain){ return text }
@@ -81,12 +81,13 @@ function updatePage(data){
 	select('#infoBox').style('display','block')
 	select('#HScode').text(`${data.HScode}`)
 	select('#HSdescription').text(data.description)
-	// don't show tariffs if not available
-	select('#tariffs').style('display',data.tariffRate==''?'none':'block')
+	// don't show data if not available
+	selectAll('.model-results')
+		.style('display',data.hasEstimatedGain ? 'block' : 'none' )
+	select('#noEffect')
+		.style('display', data.hasEstimatedGain ? 'none': 'block' )
 	select('#oldTariffRate').text( TRF.format(data.initialTariffRate))
 	select('#newTariffRate').text( TRF.format(data.tariffRate) )
-	// display link if no estimated gains
-	select('#noEffect').style('display', data.CAgain==''?'block':'none')
 	// set additional region data specific to product category
 	regions.map( region => {
 		region.gain   = Number(data[`${region.abbr}gain`])

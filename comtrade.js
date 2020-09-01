@@ -80,7 +80,7 @@ export async function addComtradeData( HScode ){
 		.call( yAxis )
 
 	updateChart(svg,sourceData,X,Y)
-	loading.text('Loading more trade data...')
+	loading.text('Loading data for additional countries...')
 	
 	// get trade with ALL partners in the last period
 	let newData = await getAllDataFor(
