@@ -134,7 +134,14 @@ function updatePage(data){
 		.data(affectedRegions,r=>r.name)
 		.join('g').classed('bar',true)
 		.call( g => {
-			g.append('title').text(d=>`${d.name}: ${USD.format(d.gain)}`)
+			g.append('title')
+				.text( d => {
+					let text = `${d.name}: ${USD.format(d.gain)}` 
+					if(!isNaN(d.change)){
+						text += ` (${PCT.format(d.change)})`
+					}
+					return text
+				} )
 			g.append('text').text(d=>d.name)
 				.attr('y', (d,i) => Y(i) + barHeight - 2 )
 				.attr('x', d => d.gain > 0 ? X(0)-5 : X(0)+5 )
@@ -152,7 +159,3 @@ function updatePage(data){
 				.attr('title', d => d.name )
 		} )
 }
-
-
-
-
