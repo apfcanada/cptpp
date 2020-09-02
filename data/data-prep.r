@@ -6,28 +6,28 @@ results = read_csv(paste0(path,'sources/CPTPP_Results.csv')) %>%
 	mutate( 
 		HScode = str_replace(`HS6 Code`,"'",""),
 		hasEstimatedGain = TRUE,
-		tariffRate = `Japan Rate for Canada TPP` - 1,
+		tariffRate = round( `Japan Rate for Canada TPP`-1, 2),
 		
-		BCgain = `BC Gain - no export promotion`  * 1000,
-		ABgain = `AB Gain - no export promotion` * 1000,
-		SKgain = `SK Gain - no export promotion` * 1000,
-		MBgain = `MB Gain - no export promotion` * 1000,
-		ROCgain = `ROC Gain - No Export Promotion` * 1000,
-		CAgain = `Total Canada Gain - no export promotion` * 1000,
-		JPgain = `Japan's export to Japan Change (internal trade change)` * 1000,
-		MLgain = `Malaysia's export to Japan Change` * 1000,
-		MXgain = `Mexico's export to Japan Change` * 1000,
-		NZgain = `New Zealand's export to Japan Change` * 1000,
-		CNgain = `China's export to Japan Change` * 1000,
-		EUgain = `EU's export to Japan Change` * 1000,
-		USgain = `USA's export to Japan Change` * 1000,
+		BCgain = round(`BC Gain - no export promotion`)  * 1000,
+		ABgain = round(`AB Gain - no export promotion`) * 1000,
+		SKgain = round(`SK Gain - no export promotion`) * 1000,
+		MBgain = round(`MB Gain - no export promotion`) * 1000,
+		ROCgain = round(`ROC Gain - No Export Promotion`) * 1000,
+		CAgain = round(`Total Canada Gain - no export promotion`) * 1000,
+		JPgain = round(`Japan's export to Japan Change (internal trade change)`) * 1000,
+		MLgain = round(`Malaysia's export to Japan Change`) * 1000,
+		MXgain = round(`Mexico's export to Japan Change`) * 1000,
+		NZgain = round(`New Zealand's export to Japan Change`) * 1000,
+		CNgain = round(`China's export to Japan Change`) * 1000,
+		EUgain = round(`EU's export to Japan Change`) * 1000,
+		USgain = round(`USA's export to Japan Change`) * 1000,
 		
-		BCgainPercent = as.numeric(str_replace(`BC%`,'%',''))/100,
-		ABgainPercent = as.numeric(str_replace(`AB%`,'%',''))/100,
-		SKgainPercent = as.numeric(str_replace(`SK%`,'%',''))/100,
-		MBgainPercent = as.numeric(str_replace(`MB%`,'%',''))/100,
-		CAgainPercent = as.numeric(str_replace(`Total Canada Gain %`,'%',''))/100,
-		ROCgainPercent = as.numeric(str_replace(`ROC Gain %`,'%',''))/100
+		BCgainPercent = round(as.numeric(str_replace(`BC%`,'%',''))/100,2),
+		ABgainPercent = round(as.numeric(str_replace(`AB%`,'%',''))/100,2),
+		SKgainPercent = round(as.numeric(str_replace(`SK%`,'%',''))/100,2),
+		MBgainPercent = round(as.numeric(str_replace(`MB%`,'%',''))/100,2),
+		CAgainPercent = round(as.numeric(str_replace(`Total Canada Gain %`,'%',''))/100,2),
+		ROCgainPercent = round(as.numeric(str_replace(`ROC Gain %`,'%',''))/100,2)
 	) %>%
 	select(
 		HScode,
@@ -47,7 +47,7 @@ allTrade = read_csv(paste0(path,'sources/comtrade.csv')) %>%
 
 initialRates = read_csv(paste0(path,'sources/Tariff Start and End.csv')) %>%
 	mutate( 
-		initialTariffRate = Starting / 100 
+		initialTariffRate = round(Starting/100,2) 
 	) %>%
 	select( 
 		HScode = `Product code Txt`,
@@ -67,3 +67,4 @@ newData = results %>%
 	)
 
 write_csv(newData,paste0(path,'unified-data.csv'),na='')
+
