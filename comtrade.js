@@ -29,7 +29,8 @@ const canada = 124
 
 const colors = scaleOrdinal().range(schemeAccent)
 
-// sometimes this gets called too many times, or too quickly
+// check that data for this (or another) HS code isn't already loading
+// abort if another HS code has been called more recently
 var currentlyLoading = null
 
 export async function addComtradeData( HScode ){
@@ -39,8 +40,8 @@ export async function addComtradeData( HScode ){
 	const svg = select('div#comtradeData svg')
 	
 	// add loading text
-	let loading = select('div#comtradeData')
-		.insert('p',' svg')
+	let loading = select('div#comtradeData p.status')
+		.style('display',null)
 		.text('Loading trade data...')
 	// remove any preexisting data
 	svg.select('g.dataSpace').selectAll('path').remove()
@@ -48,7 +49,10 @@ export async function addComtradeData( HScode ){
 	
 	// get data for all available times, for world + Canada
 	var sourceData = await getAllDataFor( HScode, [world,canada], 'all' )
-	if( currentlyLoading != HScode ){ return loading.remove() }
+	if( currentlyLoading != HScode ){ return loading.style('display','none') }
+	if(sourceData.length == 0){
+		loading.text('Problem loading trade data. Please try again.')
+	}
 	sourceData = uniqueData(sourceData)
 	
 	// find a list of available dates 
@@ -87,7 +91,7 @@ export async function addComtradeData( HScode ){
 	let newData = await getAllDataFor(
 		HScode, 'all', periods.map( p => date2period(p) ).slice(-1)
 	)
-	if( currentlyLoading != HScode ){ return loading.remove() }
+	if( currentlyLoading != HScode ){ return loading.style('display','none') }
 //	sourceData = uniqueData( sourceData.concat(newData) );
 //	updateChart(svg,sourceData,X,Y);
 	// of these, find those with >= 5% market share
@@ -102,12 +106,12 @@ export async function addComtradeData( HScode ){
 		let queryPartners = unqueriedPartners.slice(-5)
 		unqueriedPartners = unqueriedPartners.slice(0,-5)
 		let newData = await getAllDataFor( HScode, queryPartners, 'all' )
-		if( currentlyLoading != HScode ){ return loading.remove() }
+		if( currentlyLoading != HScode ){ return loading.style('display','none') }
 		sourceData = uniqueData( sourceData.concat(newData) );
 		updateChart(svg,sourceData,X,Y);
 	}
 	// remove "loading..." now that we're done
-	loading.remove()
+	loading.style('display','none')
 	currentlyLoading = null
 }
 
