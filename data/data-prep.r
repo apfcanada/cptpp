@@ -45,8 +45,7 @@ allTrade = read_csv(paste0(path,'sources/comtrade.csv')) %>%
 		description = Commodity
 	) %>% 
 	group_by( HScode, description ) %>%
-	summarize( tradeValue = round(mean(tradeValue)) ) %>% 
-	filter( tradeValue > 5000 )
+	summarize( tradeValue = round(mean(tradeValue)) )
 
 
 initialRates = read_csv(paste0(path,'sources/Tariff Start and End.csv')) %>%
@@ -68,6 +67,7 @@ newData = results %>%
 		!hasEstimatedGain, # negation for true-first order
 		-tradeValue # largest first
 	) %>% 
+	filter( tradeValue > 50000 ) %>% 
 	select( -altDescription, -tradeValue )
 
 write_csv(newData,paste0(path,'unified-data.csv'),na='')
