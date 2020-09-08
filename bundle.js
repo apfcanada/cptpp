@@ -6077,12 +6077,12 @@
 
 	const colors$1 = ordinal().range(schemeAccent);
 
-	// sometimes this gets called too many times, so this check is required
-	var currentlyWorking = null;
+	// sometimes this gets called too many times, or too quickly
+	var currentlyLoading = null;
 
 	async function addComtradeData( HScode ){
-		if( currentlyWorking && currentlyWorking == HScode ){ return }
-		currentlyWorking = HScode;
+		if( currentlyLoading && currentlyLoading == HScode ){ return }
+		currentlyLoading = HScode;
 		
 		const svg = select('div#comtradeData svg');
 		
@@ -6096,6 +6096,7 @@
 		
 		// get data for all available times, for world + Canada
 		var sourceData = await getAllDataFor( HScode, [world,canada], 'all' );
+		if( currentlyLoading != HScode ){ return loading.remove() }
 		sourceData = uniqueData(sourceData);
 		
 		// find a list of available dates 
@@ -6134,6 +6135,7 @@
 		let newData = await getAllDataFor(
 			HScode, 'all', periods.map( p => date2period(p) ).slice(-1)
 		);
+		if( currentlyLoading != HScode ){ return loading.remove() }
 	//	sourceData = uniqueData( sourceData.concat(newData) );
 	//	updateChart(svg,sourceData,X,Y);
 		// of these, find those with >= 5% market share
@@ -6147,15 +6149,14 @@
 			// pop 5
 			let queryPartners = unqueriedPartners.slice(-5);
 			unqueriedPartners = unqueriedPartners.slice(0,-5);
-			let newData = await getAllDataFor(
-				HScode, queryPartners, 'all'
-			);
+			let newData = await getAllDataFor( HScode, queryPartners, 'all' );
+			if( currentlyLoading != HScode ){ return loading.remove() }
 			sourceData = uniqueData( sourceData.concat(newData) );
 			updateChart(svg,sourceData,X,Y);
 		}
 		// remove "loading..." now that we're done
 		loading.remove();
-		currentlyWorking = null;
+		currentlyLoading = null;
 	}
 
 	function updateChart(svg,data,X,Y){
