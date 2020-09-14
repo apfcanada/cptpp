@@ -6375,13 +6375,19 @@
 			] )
 			.range( [ 0 + margin.left, width - margin.right ] );
 		// apply the axis
+		let numTicksDesired = 6;
 		svg.select('g#xAxis')
 			.attr('transform',`translate(0,${height-margin.bottom})`)
-			.call( axisBottom(X).ticks(6,'$.2~s') );
-		// add a vertical line at $0
-		svg.select('path#zero')
-			.attr('d',`M ${X(0)} ${margin.top} L ${X(0)} ${height-margin.bottom}`)
-			.attr('stroke','grey');
+			.call( axisBottom(X).ticks(numTicksDesired,'$.2~s') );
+		// add vertical grid aligned with ticks
+		svg.select('g.grid')
+			.selectAll("line")
+			.data(X.ticks(numTicksDesired))
+			.join('line')
+			.attr('x1',d=>X(d))
+			.attr('x2',d=>X(d))
+			.attr('y1',margin.top)
+			.attr('y2',height-margin.bottom);
 		
 		const Y = linear$1()
 			.domain( [ 0, affectedRegions.length - 1 ] )

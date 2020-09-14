@@ -47,6 +47,10 @@ div#infoBox {
 	margin: 0px 20px; }
 #oldTariffRate {
 	text-decoration-color: red; }
+	
+svg .grid line {
+	stroke: #aaa;
+	stroke-width: 0.5px; }
 
 /* footnotes */
 h3 sup {
