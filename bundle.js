@@ -6381,13 +6381,11 @@
 			.call( axisBottom(X).ticks(numTicksDesired,'$.2~s') );
 		// add vertical grid aligned with ticks
 		svg.select('g.grid')
-			.selectAll("line")
+			.selectAll('path')
 			.data(X.ticks(numTicksDesired))
-			.join('line')
-			.attr('x1',d=>X(d))
-			.attr('x2',d=>X(d))
-			.attr('y1',margin.top)
-			.attr('y2',height-margin.bottom);
+			.join('path')
+			.attr('d',d=>`M${X(d)} ${margin.top} L${X(d)} ${height-margin.bottom}`)
+			.style('stroke',d=> d == 0 ? 'black' : null );
 		
 		const Y = linear$1()
 			.domain( [ 0, affectedRegions.length - 1 ] )
