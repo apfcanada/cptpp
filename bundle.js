@@ -3289,10 +3289,16 @@
 	  return transformer()(identity$1, identity$1);
 	}
 
+	function formatDecimal(x) {
+	  return Math.abs(x = Math.round(x)) >= 1e21
+	      ? x.toLocaleString("en").replace(/,/g, "")
+	      : x.toString(10);
+	}
+
 	// Computes the decimal coefficient and exponent of the specified number x with
 	// significant digits p, where x is positive and p is in [1, 21] or undefined.
-	// For example, formatDecimal(1.23) returns ["123", 0].
-	function formatDecimal(x, p) {
+	// For example, formatDecimalParts(1.23) returns ["123", 0].
+	function formatDecimalParts(x, p) {
 	  if ((i = (x = p ? x.toExponential(p - 1) : x.toExponential()).indexOf("e")) < 0) return null; // NaN, ±Infinity
 	  var i, coefficient = x.slice(0, i);
 
@@ -3305,7 +3311,7 @@
 	}
 
 	function exponent(x) {
-	  return x = formatDecimal(Math.abs(x)), x ? x[1] : NaN;
+	  return x = formatDecimalParts(Math.abs(x)), x ? x[1] : NaN;
 	}
 
 	function formatGroup(grouping, thousands) {
@@ -3398,7 +3404,7 @@
 	var prefixExponent;
 
 	function formatPrefixAuto(x, p) {
-	  var d = formatDecimal(x, p);
+	  var d = formatDecimalParts(x, p);
 	  if (!d) return x + "";
 	  var coefficient = d[0],
 	      exponent = d[1],
@@ -3407,11 +3413,11 @@
 	  return i === n ? coefficient
 	      : i > n ? coefficient + new Array(i - n + 1).join("0")
 	      : i > 0 ? coefficient.slice(0, i) + "." + coefficient.slice(i)
-	      : "0." + new Array(1 - i).join("0") + formatDecimal(x, Math.max(0, p + i - 1))[0]; // less than 1y!
+	      : "0." + new Array(1 - i).join("0") + formatDecimalParts(x, Math.max(0, p + i - 1))[0]; // less than 1y!
 	}
 
 	function formatRounded(x, p) {
-	  var d = formatDecimal(x, p);
+	  var d = formatDecimalParts(x, p);
 	  if (!d) return x + "";
 	  var coefficient = d[0],
 	      exponent = d[1];
@@ -3421,19 +3427,19 @@
 	}
 
 	var formatTypes = {
-	  "%": function(x, p) { return (x * 100).toFixed(p); },
-	  "b": function(x) { return Math.round(x).toString(2); },
-	  "c": function(x) { return x + ""; },
-	  "d": function(x) { return Math.round(x).toString(10); },
-	  "e": function(x, p) { return x.toExponential(p); },
-	  "f": function(x, p) { return x.toFixed(p); },
-	  "g": function(x, p) { return x.toPrecision(p); },
-	  "o": function(x) { return Math.round(x).toString(8); },
-	  "p": function(x, p) { return formatRounded(x * 100, p); },
+	  "%": (x, p) => (x * 100).toFixed(p),
+	  "b": (x) => Math.round(x).toString(2),
+	  "c": (x) => x + "",
+	  "d": formatDecimal,
+	  "e": (x, p) => x.toExponential(p),
+	  "f": (x, p) => x.toFixed(p),
+	  "g": (x, p) => x.toPrecision(p),
+	  "o": (x) => Math.round(x).toString(8),
+	  "p": (x, p) => formatRounded(x * 100, p),
 	  "r": formatRounded,
 	  "s": formatPrefixAuto,
-	  "X": function(x) { return Math.round(x).toString(16).toUpperCase(); },
-	  "x": function(x) { return Math.round(x).toString(16); }
+	  "X": (x) => Math.round(x).toString(16).toUpperCase(),
+	  "x": (x) => Math.round(x).toString(16)
 	};
 
 	function identity$2(x) {
@@ -3450,7 +3456,7 @@
 	      decimal = locale.decimal === undefined ? "." : locale.decimal + "",
 	      numerals = locale.numerals === undefined ? identity$2 : formatNumerals(map.call(locale.numerals, String)),
 	      percent = locale.percent === undefined ? "%" : locale.percent + "",
-	      minus = locale.minus === undefined ? "-" : locale.minus + "",
+	      minus = locale.minus === undefined ? "−" : locale.minus + "",
 	      nan = locale.nan === undefined ? "NaN" : locale.nan + "";
 
 	  function newFormat(specifier) {
@@ -3585,11 +3591,9 @@
 	var formatPrefix;
 
 	defaultLocale({
-	  decimal: ".",
 	  thousands: ",",
 	  grouping: [3],
-	  currency: ["$", ""],
-	  minus: "-"
+	  currency: ["$", ""]
 	});
 
 	function defaultLocale(definition) {
@@ -6061,6 +6065,14 @@
 
 	var d3AreaLabel$1 = /*@__PURE__*/unwrapExports(d3AreaLabel);
 
+	function dollar(number,digits=2){ 
+		return format(`-$.${digits}~s`)(number).replace('G','B')
+	}
+
+	function percent(number){
+		return format('~p')(number)
+	}
+
 	// use UN comtrade data to construct an SVG chart showing each major trading 
 
 	const period2date = timeParse('%Y');
@@ -6122,7 +6134,7 @@
 		const Y = linear$1() //  trade value axis
 			.domain( [ 0, maxTradeValue ] )
 			.range( [ height - margin.bottom, 0 + margin.top ] );
-		const yAxis = axisLeft(Y).ticks(5,'$.2~s');
+		const yAxis = axisLeft(Y).ticks(5).tickFormat(dollar);
 		
 		// apply the axes
 		svg.select('g.xAxis')
@@ -6259,15 +6271,6 @@
 		} ).filter( d => d )
 	}
 
-	// formatting
-	const USD = new Intl.NumberFormat( 'en-CA',
-		{ style: 'currency', currency: 'USD', currencyDisplay: 'symbol',
-		minimumFractionDigits: 0, maximumFractionDigits: 0 } );
-	const PCT = new Intl.NumberFormat( 'en-CA',
-		{ style: 'percent', signDisplay: 'exceptZero' } );
-	const TRF = new Intl.NumberFormat('en-CA',
-		{ style: 'percent', maximumFractionDigits: 2 } );
-		
 	const regions = [
 		{abbr:'CA', name:'Canada',          color:'red'},
 		{abbr:'BC', name:'British Columbia',color:'#f58220'},
@@ -6343,8 +6346,8 @@
 			.style('display',data.hasEstimatedGain ? 'block' : 'none' );
 		select('#noEffect')
 			.style('display', data.hasEstimatedGain ? 'none': 'block' );
-		select('#oldTariffRate').text( TRF.format(data.initialTariffRate));
-		select('#newTariffRate').text( TRF.format(data.tariffRate) );
+		select('#oldTariffRate').text( percent(data.initialTariffRate));
+		select('#newTariffRate').text( percent(data.tariffRate) );
 		// set additional region data specific to product category
 		regions.map( region => {
 			region.gain   = Number(data[`${region.abbr}gain`]);
@@ -6378,7 +6381,7 @@
 		let numTicksDesired = 6;
 		svg.select('g#xAxis')
 			.attr('transform',`translate(0,${height-margin.bottom})`)
-			.call( axisBottom(X).ticks(numTicksDesired,'$.2~s') );
+			.call( axisBottom(X).ticks(numTicksDesired).tickFormat(dollar) );
 		// add vertical grid aligned with ticks
 		svg.select('g.grid')
 			.selectAll('path')
@@ -6436,9 +6439,9 @@
 		}
 		
 		function titleText(d){
-			let text = `${d.name}: ${USD.format(d.gain)}`; 
+			let text = `${d.name}: ${dollar(d.gain,4)}`; 
 			if(!isNaN(d.change)){
-				text += ` (${PCT.format(d.change)})`;
+				text += ` (${percent(d.change)})`;
 			}
 			return text
 		}

@@ -2,19 +2,10 @@ import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv } from 'd3-fetch'
 import { select,selectAll } from 'd3-selection'
 import { addComtradeData } from './comtrade'
-
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
+import { dollar, percent } from './format'
 
-// formatting
-const USD = new Intl.NumberFormat( 'en-CA',
-	{ style: 'currency', currency: 'USD', currencyDisplay: 'symbol',
-	minimumFractionDigits: 0, maximumFractionDigits: 0 } );
-const PCT = new Intl.NumberFormat( 'en-CA',
-	{ style: 'percent', signDisplay: 'exceptZero' } );
-const TRF = new Intl.NumberFormat('en-CA',
-	{ style: 'percent', maximumFractionDigits: 2 } );
-	
 const regions = [
 	{abbr:'CA', name:'Canada',          color:'red'},
 	{abbr:'BC', name:'British Columbia',color:'#f58220'},
@@ -90,8 +81,8 @@ function updatePage(data){
 		.style('display',data.hasEstimatedGain ? 'block' : 'none' )
 	select('#noEffect')
 		.style('display', data.hasEstimatedGain ? 'none': 'block' )
-	select('#oldTariffRate').text( TRF.format(data.initialTariffRate))
-	select('#newTariffRate').text( TRF.format(data.tariffRate) )
+	select('#oldTariffRate').text( percent(data.initialTariffRate))
+	select('#newTariffRate').text( percent(data.tariffRate) )
 	// set additional region data specific to product category
 	regions.map( region => {
 		region.gain   = Number(data[`${region.abbr}gain`])
@@ -125,7 +116,7 @@ function updatePage(data){
 	let numTicksDesired = 6
 	svg.select('g#xAxis')
 		.attr('transform',`translate(0,${height-margin.bottom})`)
-		.call( axisBottom(X).ticks(numTicksDesired,'$.2~s') )
+		.call( axisBottom(X).ticks(numTicksDesired).tickFormat(dollar) )
 	// add vertical grid aligned with ticks
 	svg.select('g.grid')
 		.selectAll('path')
@@ -183,9 +174,9 @@ function updatePage(data){
 	}
 	
 	function titleText(d){
-		let text = `${d.name}: ${USD.format(d.gain)}` 
+		let text = `${d.name}: ${dollar(d.gain,4)}` 
 		if(!isNaN(d.change)){
-			text += ` (${PCT.format(d.change)})`
+			text += ` (${percent(d.change)})`
 		}
 		return text
 	}

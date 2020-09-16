@@ -14,6 +14,7 @@ import { schemeAccent } from 'd3-scale-chromatic'
 import { timeParse, timeFormat } from 'd3-time-format'
 import { timeYear, timeMonth } from 'd3-time'
 import { areaLabel } from 'd3-area-label'
+import { dollar } from './format'
 
 const period2date = timeParse('%Y')
 const date2period = timeFormat('%Y')
@@ -74,7 +75,7 @@ export async function addComtradeData( HScode ){
 	const Y = scaleLinear() //  trade value axis
 		.domain( [ 0, maxTradeValue ] )
 		.range( [ height - margin.bottom, 0 + margin.top ] )
-	const yAxis = axisLeft(Y).ticks(5,'$.2~s')
+	const yAxis = axisLeft(Y).ticks(5).tickFormat(dollar)
 	
 	// apply the axes
 	svg.select('g.xAxis')
