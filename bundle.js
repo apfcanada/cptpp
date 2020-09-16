@@ -5697,14 +5697,6 @@
 	  return axis(left, scale);
 	}
 
-	function colors(specifier) {
-	  var n = specifier.length / 6 | 0, colors = new Array(n), i = 0;
-	  while (i < n) colors[i] = "#" + specifier.slice(i * 6, ++i * 6);
-	  return colors;
-	}
-
-	var schemeAccent = colors("7fc97fbeaed4fdc086ffff99386cb0f0027fbf5b17666666");
-
 	var d3AreaLabel = createCommonjsModule(function (module, exports) {
 	(function (global, factory) {
 		 factory(exports, src, src$1) ;
@@ -6073,6 +6065,18 @@
 		return format('~p')(number)
 	}
 
+	// named colours
+	const canadaRed = '#e63539';
+	const otherGrey = '#919aa1';
+
+	const otherPrimaries = [
+		'#00afe4', // blue
+		'#eabd3b', // yellow
+		'#ea7369', // coral red
+		'#1de4bd', // green/teal
+		'#af4bce'  // purple
+	];
+
 	// use UN comtrade data to construct an SVG chart showing each major trading 
 
 	const period2date = timeParse('%Y');
@@ -6087,7 +6091,7 @@
 	const world = 0;
 	const canada = 124;
 
-	const colors$1 = ordinal().range(schemeAccent);
+	const colors = ordinal().range(otherPrimaries);
 
 	// check that data for this (or another) HS code isn't already loading
 	// abort if another HS code has been called more recently
@@ -6218,11 +6222,11 @@
 			.selectAll('path')
 			.data(series,d=>d.key)
 			.join('path')
-			.attr('fill', (d,i) => {
+			.attr('fill', d => {
 				switch(d.key){
-					case 'Canada': return 'red'
-					case 'Other': return 'grey'
-					default: return colors$1(i)
+					case 'Canada': return canadaRed;
+					case 'Other': return otherGrey;
+					default: return colors(d.key); 
 				}
 			} )
 			.attr('stroke-width',0.5)

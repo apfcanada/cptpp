@@ -10,11 +10,11 @@ import {
 } from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
-import { schemeAccent } from 'd3-scale-chromatic'
 import { timeParse, timeFormat } from 'd3-time-format'
 import { timeYear, timeMonth } from 'd3-time'
 import { areaLabel } from 'd3-area-label'
 import { dollar } from './format'
+import { canadaRed, otherGrey, otherPrimaries } from './APFC-palette'
 
 const period2date = timeParse('%Y')
 const date2period = timeFormat('%Y')
@@ -28,7 +28,7 @@ const margin = {top: 5, right: 5, bottom: 20, left: 40}
 const world = 0
 const canada = 124
 
-const colors = scaleOrdinal().range(schemeAccent)
+const colors = scaleOrdinal().range(otherPrimaries)
 
 // check that data for this (or another) HS code isn't already loading
 // abort if another HS code has been called more recently
@@ -159,11 +159,11 @@ function updateChart(svg,data,X,Y){
 		.selectAll('path')
 		.data(series,d=>d.key)
 		.join('path')
-		.attr('fill', (d,i) => {
+		.attr('fill', d => {
 			switch(d.key){
-				case 'Canada': return 'red'
-				case 'Other': return 'grey'
-				default: return colors(i)
+				case 'Canada': return canadaRed;
+				case 'Other': return otherGrey;
+				default: return colors(d.key); 
 			}
 		} )
 		.attr('stroke-width',0.5)
