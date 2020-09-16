@@ -21,9 +21,10 @@
 :root {
 	--bg: #f9f9f9;
 	--text: #2d2d2d;
-	--link: #325ca5;
+	--hlt-grey: #d4d4d4;
 	--APFC-red: #e63539;
 	--APFC-blue: #00a4e4;
+	--lightest-grey: #ececec;
 }
 
 /* BASICS */
@@ -38,7 +39,7 @@ div#infoBox {
 
 #selected { 
 	font-size: 1.3em;
-	background: #ddd;
+	background: var(--hlt-grey);
 	padding: 12px; }
 #HScode { 
 	font-weight: bold; }
@@ -53,7 +54,19 @@ div#infoBox {
 	margin: 0px 20px; }
 #oldTariffRate {
 	text-decoration-color: var(--APFC-red); }
-	
+
+#expectedGains, 
+#comtradeData {
+	background: var(--lightest-grey);
+	border: 2px solid var(--hlt-grey);
+	padding: 15px;
+	margin: 20px 0px;
+	border-radius: 10px;
+	width: 600px; }
+#expectedGains h3,
+#comtradeData h3 {
+	margin-top: 0;}
+
 svg .grid path {
 	stroke: #ddd;
 	stroke-width: 1px; }
