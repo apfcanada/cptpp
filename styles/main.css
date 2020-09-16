@@ -37,7 +37,9 @@ div#infoBox {
 	display: none; }
 
 #selected { 
-	font-size: 1.3em; }
+	font-size: 1.3em;
+	background: #ddd;
+	padding: 12px; }
 #HScode { 
 	font-weight: bold; }
 #HSdescription {
