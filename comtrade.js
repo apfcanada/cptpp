@@ -28,7 +28,7 @@ const margin = {top: 5, right: 5, bottom: 20, left: 40}
 const world = 0
 const canada = 124
 
-const colors = scaleOrdinal().range(otherPrimaries)
+var colors 
 
 // check that data for this (or another) HS code isn't already loading
 // abort if another HS code has been called more recently
@@ -39,6 +39,8 @@ export async function addComtradeData( HScode ){
 	currentlyLoading = HScode
 	
 	const svg = select('div#comtradeData svg')
+	
+	colors = scaleOrdinal().range(otherPrimaries)
 	
 	// add loading text
 	let loading = select('div#comtradeData p.status')
