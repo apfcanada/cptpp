@@ -15,7 +15,7 @@ import { timeYear, timeMonth } from 'd3-time'
 import { areaLabel } from 'd3-area-label'
 import { dollar } from './format'
 import { 
-	primaryBrandColors,
+	brand as brandColors,
 	canadaRed,
 	otherGrey
 } from './APFC-palette'
@@ -33,7 +33,7 @@ const world = 0
 const canada = 124
 
 var colors 
-const otherPrimaries = primaryBrandColors.slice(1)
+const otherPrimaries = Object.values(brandColors).slice(1)
 
 // check that data for this (or another) HS code isn't already loading
 // abort if another HS code has been called more recently

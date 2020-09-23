@@ -6381,19 +6381,45 @@
 		return format$1('~p')(number)
 	}
 
-	// named colours
-	const canadaRed = '#e63539';
-	const contrastBlue = '#00afe4';
-	const otherGrey = '#919aa1';
+	// primary brand colors
+	const brand = {
+		red:    '#e63539',
+		blue:   '#00afe4',
+		orange: '#eabd3b',
+		peach:  '#ea7369',
+		teal:   '#1de4bd',
+		violet: '#af4bce'
+	};
 
-	const primaryBrandColors = [
-		canadaRed,
-		contrastBlue,
-		'#eabd3b', // yellow
-		'#ea7369', // coral red
-		'#1de4bd', // green/teal
-		'#af4bce'  // purple
-	];
+	// ordinal color scales
+	const ordinal$1 = {
+		blackGrey: [ // black -> light grey
+			'#000000', '#2b2b2b', '#919aa1',
+			'#bbbbbb', '#d4d4d4', '#ececec'
+		],
+		redYellow: [
+			'#2c0708', '#710003', '#c20000',
+			brand.red, '#de542c', '#ef7e32', brand.orange,
+			'#e7e34e', '#f7f4bf', '#2c0708' 
+		],
+		blueTeal: [ 
+			'#000b2f', '#142459', '#176ba0',
+			brand.blue, '#1ac9e6', '#1bd4d4', brand.teal,
+			'#6ef0d2', '#c7f9ee', '#000b2f'
+		],
+		violetPeach: [
+			'#191127', '#29066b', '#7d3ac1',
+			brand.violet, '#db4cb2', '#eb548c', brand.peach,
+			'#f0a58f', '#fceae6', '#fef4f2'
+		]
+	};
+
+	// named colours
+
+	// use to represent Canada in categorical scales
+	const canadaRed = brand.red;
+	// use for "other" values in a categorical scales
+	const otherGrey = ordinal$1.blackGrey[2];
 
 	// use UN comtrade data to construct an SVG chart showing each major trading 
 
@@ -6410,7 +6436,7 @@
 	const canada = 124;
 
 	var colors; 
-	const otherPrimaries = primaryBrandColors.slice(1);
+	const otherPrimaries = Object.values(brand).slice(1);
 
 	// check that data for this (or another) HS code isn't already loading
 	// abort if another HS code has been called more recently
@@ -6598,19 +6624,19 @@
 
 	const regions = [
 		{abbr:'CA', name:'Canada',          color:canadaRed},
-		{abbr:'BC', name:'British Columbia',color:'#f58220'},
-		{abbr:'AB', name:'Alberta',         color:'#da1f46'},
-		{abbr:'SK', name:'Saskatchewan',    color:'#485865'},
-		{abbr:'MB', name:'Manitoba',        color:'#a7a9ac'},
-		{abbr:'ROC',name:'Rest of Canada',  color:'#111111'},
+		{abbr:'BC', name:'British Columbia',color:ordinal$1.redYellow[4]},
+		{abbr:'AB', name:'Alberta',         color:ordinal$1.redYellow[5]},
+		{abbr:'SK', name:'Saskatchewan',    color:ordinal$1.redYellow[6]},
+		{abbr:'MB', name:'Manitoba',        color:ordinal$1.redYellow[7]},
+		{abbr:'ROC',name:'Rest of Canada',  color:ordinal$1.blackGrey[1]},
 		//
-		{abbr:'JP', name:'Japan',           color:otherGrey},
-		{abbr:'ML', name:'Malaysia',        color:otherGrey},
-		{abbr:'MX', name:'Mexico',          color:otherGrey},
-		{abbr:'NZ', name:'New Zealand',     color:otherGrey},
-		{abbr:'CN', name:'China',           color:otherGrey},
-		{abbr:'EU', name:'European Union',  color:otherGrey},
-		{abbr:'US', name:'United States',   color:otherGrey}
+		{abbr:'JP', name:'Japan'},
+		{abbr:'ML', name:'Malaysia'},
+		{abbr:'MX', name:'Mexico'},
+		{abbr:'NZ', name:'New Zealand'},
+		{abbr:'CN', name:'China',},
+		{abbr:'EU', name:'European Union'},
+		{abbr:'US', name:'United States'}
 	];
 
 	// create the search box, populated with data
@@ -6744,7 +6770,7 @@
 					if(d.gain > 0){ return X(d.gain) - X(0) }
 					else { return X(0) - X(d.gain) }
 				} )
-				.attr('fill', d => d.color );
+				.attr('fill', d => d.hasOwnProperty('color') ? d.color : otherGrey );
 		}
 		
 		function updateBar(updateSelection){

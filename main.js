@@ -5,23 +5,23 @@ import { addComtradeData } from './comtrade'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { dollar, percent } from './format'
-import { canadaRed, otherGrey } from './APFC-palette'
+import { ordinal, canadaRed, otherGrey } from './APFC-palette'
 
 const regions = [
 	{abbr:'CA', name:'Canada',          color:canadaRed},
-	{abbr:'BC', name:'British Columbia',color:'#f58220'},
-	{abbr:'AB', name:'Alberta',         color:'#da1f46'},
-	{abbr:'SK', name:'Saskatchewan',    color:'#485865'},
-	{abbr:'MB', name:'Manitoba',        color:'#a7a9ac'},
-	{abbr:'ROC',name:'Rest of Canada',  color:'#111111'},
+	{abbr:'BC', name:'British Columbia',color:ordinal.redYellow[4]},
+	{abbr:'AB', name:'Alberta',         color:ordinal.redYellow[5]},
+	{abbr:'SK', name:'Saskatchewan',    color:ordinal.redYellow[6]},
+	{abbr:'MB', name:'Manitoba',        color:ordinal.redYellow[7]},
+	{abbr:'ROC',name:'Rest of Canada',  color:ordinal.blackGrey[1]},
 	//
-	{abbr:'JP', name:'Japan',           color:otherGrey},
-	{abbr:'ML', name:'Malaysia',        color:otherGrey},
-	{abbr:'MX', name:'Mexico',          color:otherGrey},
-	{abbr:'NZ', name:'New Zealand',     color:otherGrey},
-	{abbr:'CN', name:'China',           color:otherGrey},
-	{abbr:'EU', name:'European Union',  color:otherGrey},
-	{abbr:'US', name:'United States',   color:otherGrey}
+	{abbr:'JP', name:'Japan'},
+	{abbr:'ML', name:'Malaysia'},
+	{abbr:'MX', name:'Mexico'},
+	{abbr:'NZ', name:'New Zealand'},
+	{abbr:'CN', name:'China',},
+	{abbr:'EU', name:'European Union'},
+	{abbr:'US', name:'United States'}
 ]
 
 // create the search box, populated with data
@@ -155,7 +155,7 @@ function updatePage(data){
 				if(d.gain > 0){ return X(d.gain) - X(0) }
 				else{ return X(0) - X(d.gain) }
 			} )
-			.attr('fill', d => d.color )
+			.attr('fill', d => d.hasOwnProperty('color') ? d.color : otherGrey )
 	}
 	
 	function updateBar(updateSelection){
