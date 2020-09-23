@@ -68,7 +68,8 @@ div#infoBox {
 	margin-top: 0;}
 
 svg .grid path {
-	stroke: #ddd;
+	stroke: var(--text);
+	stroke-opacity: 0.2;
 	stroke-width: 1px; }
 
 /* footnotes */

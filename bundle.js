@@ -6383,10 +6383,12 @@
 
 	// named colours
 	const canadaRed = '#e63539';
+	const contrastBlue = '#00afe4';
 	const otherGrey = '#919aa1';
 
-	const otherPrimaries = [
-		'#00afe4', // blue
+	const primaryBrandColors = [
+		canadaRed,
+		contrastBlue,
 		'#eabd3b', // yellow
 		'#ea7369', // coral red
 		'#1de4bd', // green/teal
@@ -6408,6 +6410,7 @@
 	const canada = 124;
 
 	var colors; 
+	const otherPrimaries = primaryBrandColors.slice(1);
 
 	// check that data for this (or another) HS code isn't already loading
 	// abort if another HS code has been called more recently
@@ -6594,20 +6597,20 @@
 	}
 
 	const regions = [
-		{abbr:'CA', name:'Canada',          color:'red'},
+		{abbr:'CA', name:'Canada',          color:canadaRed},
 		{abbr:'BC', name:'British Columbia',color:'#f58220'},
 		{abbr:'AB', name:'Alberta',         color:'#da1f46'},
 		{abbr:'SK', name:'Saskatchewan',    color:'#485865'},
 		{abbr:'MB', name:'Manitoba',        color:'#a7a9ac'},
 		{abbr:'ROC',name:'Rest of Canada',  color:'#111111'},
 		//
-		{abbr:'JP', name:'Japan',           color:'grey'},
-		{abbr:'ML', name:'Malaysia',        color:'grey'},
-		{abbr:'MX', name:'Mexico',          color:'grey'},
-		{abbr:'NZ', name:'New Zealand',     color:'grey'},
-		{abbr:'CN', name:'China',           color:'grey'},
-		{abbr:'EU', name:'European Union',  color:'grey'},
-		{abbr:'US', name:'United States',   color:'grey'}
+		{abbr:'JP', name:'Japan',           color:otherGrey},
+		{abbr:'ML', name:'Malaysia',        color:otherGrey},
+		{abbr:'MX', name:'Mexico',          color:otherGrey},
+		{abbr:'NZ', name:'New Zealand',     color:otherGrey},
+		{abbr:'CN', name:'China',           color:otherGrey},
+		{abbr:'EU', name:'European Union',  color:otherGrey},
+		{abbr:'US', name:'United States',   color:otherGrey}
 	];
 
 	// create the search box, populated with data

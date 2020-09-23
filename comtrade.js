@@ -14,7 +14,11 @@ import { timeParse, timeFormat } from 'd3-time-format'
 import { timeYear, timeMonth } from 'd3-time'
 import { areaLabel } from 'd3-area-label'
 import { dollar } from './format'
-import { canadaRed, otherGrey, otherPrimaries } from './APFC-palette'
+import { 
+	primaryBrandColors,
+	canadaRed,
+	otherGrey
+} from './APFC-palette'
 
 const period2date = timeParse('%Y')
 const date2period = timeFormat('%Y')
@@ -29,6 +33,7 @@ const world = 0
 const canada = 124
 
 var colors 
+const otherPrimaries = primaryBrandColors.slice(1)
 
 // check that data for this (or another) HS code isn't already loading
 // abort if another HS code has been called more recently
