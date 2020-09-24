@@ -1477,7 +1477,7 @@
 	  return new Basis(context);
 	}
 
-	function stackOffsetNone(series, order) {
+	function none$1(series, order) {
 	  if (!((n = series.length) > 1)) return;
 	  for (var i = 1, j, s0, s1 = series[order[0]], n, m = s1.length; i < n; ++i) {
 	    s0 = s1, s1 = series[order[i]];
@@ -1487,7 +1487,7 @@
 	  }
 	}
 
-	function stackOrderNone(series) {
+	function none$2(series) {
 	  var n = series.length, o = new Array(n);
 	  while (--n >= 0) o[n] = n;
 	  return o;
@@ -1499,8 +1499,8 @@
 
 	function stack() {
 	  var keys = constant$1([]),
-	      order = stackOrderNone,
-	      offset = stackOffsetNone,
+	      order = none$2,
+	      offset = none$1,
 	      value = stackValue;
 
 	  function stack(data) {
@@ -1536,11 +1536,11 @@
 	  };
 
 	  stack.order = function(_) {
-	    return arguments.length ? (order = _ == null ? stackOrderNone : typeof _ === "function" ? _ : constant$1(slice.call(_)), stack) : order;
+	    return arguments.length ? (order = _ == null ? none$2 : typeof _ === "function" ? _ : constant$1(slice.call(_)), stack) : order;
 	  };
 
 	  stack.offset = function(_) {
-	    return arguments.length ? (offset = _ == null ? stackOffsetNone : _, stack) : offset;
+	    return arguments.length ? (offset = _ == null ? none$1 : _, stack) : offset;
 	  };
 
 	  return stack;
@@ -6428,7 +6428,7 @@
 
 	const width = 600;
 	const height = 250;
-	const margin = {top: 5, right: 5, bottom: 20, left: 40};
+	const margin = {top: 0, right: 0, bottom: 20, left: 40};
 
 	// Partner IDs for likely major trade partners
 	// https://comtrade.un.org/Data/cache/partnerAreas.json
@@ -6559,30 +6559,30 @@
 			.y1( d => Y(d[1]) )
 			.curve(curveBasis);
 		// apply the stack generator
-		let series = stack()
-			.keys([...partners])
-			.offset( stackOffsetNone )
-			.order( stackOrderNone )
-			(allTrade);
+		let series = stack().keys([...partners])(allTrade);
 			
 		svg.select('g.dataSpace')
 			.selectAll('path')
-			.data(series,d=>d.key)
-			.join('path')
-			.attr('fill', d => {
-				switch(d.key){
-					case 'Canada': return canadaRed;
-					case 'Other': return otherGrey;
-					default: return colors(d.key); 
-				}
-			} )
-			.attr('stroke-width',0.5)
-			.attr('stroke','white')
-			.attr('d',areaGen)
-			.append('title').text(d=>d.key); // country name	
+			.data( series, d => d.key )
+			.join(
+				enter => {
+					enter.append('path')
+						.attr('fill', d => {
+							switch(d.key){
+								case 'Canada': return canadaRed;
+								case 'Other': return otherGrey;
+								default: return colors(d.key); 
+							}
+						} )
+						.attr('d',areaGen)
+						.append('title').text(d=>d.key); // country name	
+				},
+				update => update.attr('d',areaGen),
+				undefined
+			);
 		let labels = svg.select('g.labels')
 			.selectAll('text')
-			.data(series)
+			.data(series,d=>d.key)
 			.join('text')
 			.text( d=> d.key )
 			.attr('transform',d3AreaLabel$1.areaLabel(areaGen))

@@ -72,6 +72,10 @@ svg .grid path {
 	stroke: var(--text);
 	stroke-opacity: 0.2;
 	stroke-width: 1px; }
+	
+#comtradeData svg .dataSpace path {
+	stroke: white;
+	stroke-width: 0.5; }
 
 /* footnotes */
 h3 sup {

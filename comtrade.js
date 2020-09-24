@@ -3,29 +3,21 @@
 
 import { json } from 'd3-fetch'
 import { select } from 'd3-selection'
-import { 
-	stack, area,
-	stackOrderNone, stackOffsetNone,
-	curveBasis
-} from 'd3-shape'
+import { stack, area, curveBasis } from 'd3-shape'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { timeParse, timeFormat } from 'd3-time-format'
 import { timeYear, timeMonth } from 'd3-time'
 import { areaLabel } from 'd3-area-label'
 import { dollar } from './format'
-import { 
-	brand as brandColors,
-	canadaRed,
-	otherGrey
-} from './APFC-palette'
+import { brand as brandColors, canadaRed, otherGrey } from './APFC-palette'
 
 const period2date = timeParse('%Y')
 const date2period = timeFormat('%Y')
 
 const width = 600
 const height = 250
-const margin = {top: 5, right: 5, bottom: 20, left: 40}
+const margin = {top: 0, right: 0, bottom: 20, left: 40}
 
 // Partner IDs for likely major trade partners
 // https://comtrade.un.org/Data/cache/partnerAreas.json
@@ -156,30 +148,30 @@ function updateChart(svg,data,X,Y){
 		.y1( d => Y(d[1]) )
 		.curve(curveBasis)
 	// apply the stack generator
-	let series = stack()
-		.keys([...partners])
-		.offset( stackOffsetNone )
-		.order( stackOrderNone )
-		(allTrade)
+	let series = stack().keys([...partners])(allTrade)
 		
 	svg.select('g.dataSpace')
 		.selectAll('path')
-		.data(series,d=>d.key)
-		.join('path')
-		.attr('fill', d => {
-			switch(d.key){
-				case 'Canada': return canadaRed;
-				case 'Other': return otherGrey;
-				default: return colors(d.key); 
-			}
-		} )
-		.attr('stroke-width',0.5)
-		.attr('stroke','white')
-		.attr('d',areaGen)
-		.append('title').text(d=>d.key) // country name	
+		.data( series, d => d.key )
+		.join(
+			enter => {
+				enter.append('path')
+					.attr('fill', d => {
+						switch(d.key){
+							case 'Canada': return canadaRed;
+							case 'Other': return otherGrey;
+							default: return colors(d.key); 
+						}
+					} )
+					.attr('d',areaGen)
+					.append('title').text(d=>d.key) // country name	
+			},
+			update => update.attr('d',areaGen),
+			undefined
+		)
 	let labels = svg.select('g.labels')
 		.selectAll('text')
-		.data(series)
+		.data(series,d=>d.key)
 		.join('text')
 		.text( d=> d.key )
 		.attr('transform',areaLabel(areaGen))
