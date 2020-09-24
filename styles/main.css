@@ -43,6 +43,8 @@ a:hover {
 	text-decoration: underline; }
 a:visited {
 	color: #7d3ac1; }
+::selection {
+	background: #eabd3b; }
 div#infoBox {
 	display: none; }
 
