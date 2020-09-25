@@ -60,6 +60,8 @@ header img {
 	
 p#overview, form, #infoBox {
 	margin: 25px 25px 0px 25px;}
+form {
+	margin-bottom: 25px; }
 
 #selected { 
 	font-size: 1.3em;
