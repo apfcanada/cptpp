@@ -74,7 +74,7 @@ function updatePage(data){
 	params.set('hs6',data.HScode)
 	window.history.replaceState({},'',`${location.pathname}?${params}`)
 	addComtradeData(data.HScode)
-	select('#infoBox').style('display','block')
+	selectAll('#infoBox, footer').style('display','block')
 	select('#HScode').text(`${data.HScode}`)
 	select('#HSdescription').text(data.description)
 	// don't show data if not available
