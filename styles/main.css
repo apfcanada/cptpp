@@ -55,6 +55,8 @@ header, footer {
 	padding: 25px; }
 header h1 {
 	margin-bottom: 0; }
+header img {
+	max-width: 100%; }
 	
 p#overview, form, #infoBox {
 	margin: 25px 25px 0px 25px;}
