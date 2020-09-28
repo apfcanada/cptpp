@@ -1,6 +1,6 @@
 import accessibleAutocomplete from 'accessible-autocomplete'
 import { csv } from 'd3-fetch'
-import { select,selectAll } from 'd3-selection'
+import { select, selectAll } from 'd3-selection'
 import { addComtradeData } from './comtrade'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'

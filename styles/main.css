@@ -86,16 +86,15 @@ form label {
 #oldTariffRate {
 	text-decoration-color: var(--APFC-red); }
 
-#expectedGains, 
-#comtradeData {
+.block {
 	background: var(--lightest-grey);
 	border: 2px solid var(--hlt-grey);
 	padding: 15px;
 	margin: 20px 0px;
 	border-radius: 10px;
 	width: 600px; }
-#expectedGains h3,
-#comtradeData h3 {
+	
+.block h3 {
 	margin-top: 0;}
 
 svg .grid path {
