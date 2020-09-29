@@ -13,15 +13,22 @@
 	<body>
 		
 		<header>
-			<img src="./logos.png"/>
+			<div id="logos">
+				<a href="https://www.asiapacific.ca/">
+					<img src="./APFC-logo.png"/>
+				</a>
+				<a href="https://cwf.ca/">
+					<img src="./CWF-logo.png"/>
+				</a>
+			</div>
 			<h1>CPTPP Product Competitiveness Tracker</h1>
 		</header>
 		
-		<p id="overview">This tool shows Canadian businesses the expected impact of the <a href="https://www.international.gc.ca/trade-commerce/trade-agreements-accords-commerciaux/agr-acc/cptpp-ptpgp/index.aspx?lang=eng">CPTPP</a> on hundreds of different <b>Canadian exports to Japan</b>. Find your product's new tariff rate, expected export gains, and who the major global players are. Explore the results by using the dropdown below to search exports by <a href="https://unstats.un.org/unsd/tradekb/Knowledgebase/Harmonized-Commodity-Description-and-Coding-Systems-HS">HS category</a> or keyword.</p>
+		<p>This tool shows Canadian businesses the expected impact of the <a href="https://www.international.gc.ca/trade-commerce/trade-agreements-accords-commerciaux/agr-acc/cptpp-ptpgp/index.aspx?lang=eng">CPTPP</a> trade agreement on hundreds of <b>Canadian exports to Japan</b>. Find your product's new tariff rate, expected export gains, and who the major global players are. Explore the results by using the dropdown below to search exports by <a href="https://unstats.un.org/unsd/tradekb/Knowledgebase/Harmonized-Commodity-Description-and-Coding-Systems-HS">HS category</a> or keyword.</p>
 		
 		<form onsubmit="return false">
 			<label for="hs6select">
-				Search a product category by six-digit HS code or description
+				Select a six-digit HS product category or search by keyword
 			</label>
 			<div id="hs6select"></div>
 		</form>
@@ -96,7 +103,7 @@
 			
 		</div>
 		
-		<footer></footer>
+		<footer>For questions or comments contact <a href="mailto:info@asiapacific.ca">info@asiapacific.ca</a></footer>
 		
 	</body>
 </html>
