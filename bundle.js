@@ -6428,7 +6428,7 @@
 
 	const width = 600;
 	const height = 250;
-	const margin = {top: 0, right: 0, bottom: 20, left: 40};
+	const margin = {top: 5, right: 0, bottom: 20, left: 40};
 
 	// Partner IDs for likely major trade partners
 	// https://comtrade.un.org/Data/cache/partnerAreas.json
@@ -6450,20 +6450,15 @@
 		
 		colors = ordinal().range(otherPrimaries);
 		
-		// add loading text
-		let loading = select('div#comtradeData p.status')
-			.style('display',null)
-			.text('Loading trade data...');
+		// display loading spinner
+		let spinner = select('div#comtradeData #spinner').style('display',null);
 		// remove any preexisting data
 		svg.select('g.dataSpace').selectAll('path').remove();
 		svg.select('g.labels').selectAll('text').remove();
 		
 		// get data for all available times, for world + Canada
 		var sourceData = await getAllDataFor( HScode, [world,canada], 'all' );
-		if( currentlyLoading != HScode ){ return loading.style('display','none') }
-		if(sourceData.length == 0){
-			loading.text('Problem loading trade data. Please try again.');
-		}
+		if( currentlyLoading != HScode ){ return spinner.style('display','none') }
 		sourceData = uniqueData(sourceData);
 		
 		// find a list of available dates 
@@ -6496,13 +6491,12 @@
 			.call( yAxis );
 
 		updateChart(svg,sourceData,X,Y);
-		loading.text('Loading data for additional countries...');
 		
 		// get trade with ALL partners in the last period
 		let newData = await getAllDataFor(
 			HScode, 'all', periods.map( p => date2period(p) ).slice(-1)
 		);
-		if( currentlyLoading != HScode ){ return loading.style('display','none') }
+		if( currentlyLoading != HScode ){ return spinner.style('display','none') }
 	//	sourceData = uniqueData( sourceData.concat(newData) );
 	//	updateChart(svg,sourceData,X,Y);
 		// of these, find those with >= 5% market share
@@ -6517,12 +6511,11 @@
 			let queryPartners = unqueriedPartners.slice(-5);
 			unqueriedPartners = unqueriedPartners.slice(0,-5);
 			let newData = await getAllDataFor( HScode, queryPartners, 'all' );
-			if( currentlyLoading != HScode ){ return loading.style('display','none') }
+			if( currentlyLoading != HScode ){ return spinner.style('display','none') }
 			sourceData = uniqueData( sourceData.concat(newData) );
 			updateChart(svg,sourceData,X,Y);
 		}
-		// remove "loading..." now that we're done
-		loading.style('display','none');
+		spinner.style('display','none');
 		currentlyLoading = null;
 	}
 
