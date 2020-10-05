@@ -94,6 +94,7 @@ form label {
 	font-weight: bold;
 	margin: 0px 20px; }
 #oldTariffRate {
+	color: rgba(0,0,0,0.5);
 	text-decoration-color: var(--APFC-red); }
 
 .block {
